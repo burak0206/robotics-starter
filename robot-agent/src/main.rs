@@ -1,8 +1,10 @@
 mod adapter;
+mod elevator;
 
 use std::{net::SocketAddr, sync::Arc, time::SystemTime};
 
 use adapter::{PublishError, Ros2Adapter};
+use elevator::ElevatorSimulator;
 use tokio::sync::Mutex;
 use tonic::{transport::Server, Request, Response, Status};
 use tracing::{info, warn};
@@ -12,6 +14,7 @@ pub mod proto {
 }
 
 use proto::{
+    elevator_service_server::ElevatorServiceServer,
     robot_service_server::{RobotService, RobotServiceServer},
     GetStatusRequest, RobotStatus, StopRequest, StopResponse,
 };
@@ -127,6 +130,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!(%addr, mode = %mode_name, "Robot gRPC service listening");
     Server::builder()
         .add_service(RobotServiceServer::new(agent))
+        .add_service(ElevatorServiceServer::new(ElevatorSimulator::default()))
         .serve_with_shutdown(addr, async {
             if let Err(error) = tokio::signal::ctrl_c().await {
                 warn!(%error, "Could not register shutdown signal");

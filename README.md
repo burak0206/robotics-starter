@@ -1,6 +1,6 @@
-# Robotik başlangıç projesi
+# Robot–bina entegrasyonu başlangıç projesi
 
-Tek robot için küçük bir uçtan uca örnek: **durum oku** ve **durdur**. Donanım gerektirmeden simülasyonla açılır.
+Robotların kapılar, asansörler ve bina olaylarıyla birlikte çalışacağı senaryolar için küçük bir başlangıç. İlk case **asansör çağırma ve kat seçimi**; mevcut robot durum ekranı ve **durdur** komutu da korunur. Donanım gerektirmeden simülasyonla açılır.
 
 ```text
 React / TypeScript web
@@ -10,8 +10,8 @@ Spring Boot / Kotlin
         │ gRPC / Protobuf
         ▼
 Rust / tonic robot-agent
-        ├── simulation (varsayılan)
-        └── ros2 → /cmd_vel (geometry_msgs/msg/Twist)
+        ├── RobotService → simulation / ros2 (/cmd_vel)
+        └── ElevatorService → asansör case simülasyonu
 ```
 
 ## Hızlı başlangıç
@@ -30,6 +30,8 @@ docker compose up --build -d
 İlk derlemede bağımlılıklar indirilir. Ekran bağlantı kurulana kadar bekleme durumunu gösterir. gRPC servisi yalnızca Compose ağına açıktır; web ve REST portları yerel makineye bağlanır.
 
 Simülasyon başlangıçta `IDLE`, %84 pil ve 0 m/s hız döndürür. Durdurunca `STOPPED` olur; tekrar durdurmak aynı sonucu verir. Durum bellektedir, Rust servisi yeniden başlayınca sıfırlanır. Pil ve hız simülasyon sabitleridir, gerçek sensör ölçümü değildir.
+
+Web'deki asansör bölümünde giriş katını seçip **Asansörü çağır** ile başla. Varış/kapı açılışı ve kabine girişi simüle ettikten sonra hedef katı seç; varışı ve kabinden çıkışı simüle ederek case'i tamamla. Katlar 0–5 arasındadır. Asansör case'i her zaman simülasyondur ve gerçek robot/asansör hareketi başlatmaz. [Case sözleşmesi ve sonraki entegrasyonlar](docs/use-cases.md).
 
 ## Yerel geliştirme
 
@@ -128,6 +130,16 @@ python3 scripts/smoke.py --base-url http://localhost:5173
 
 Smoke testi gerçek ROS modunda komut göndermez; yalnızca `simulation` yanıtını aldıktan sonra durdurmayı dener.
 
+Asansör case'inin tamamını ve yanlış sıradaki işlemlerin reddini kontrol etmek için:
+
+```sh
+python3 scripts/elevator_smoke.py
+# Web proxy'si üzerinden:
+python3 scripts/elevator_smoke.py --base-url http://localhost:5173
+```
+
+Case durumu `IDLE` veya `COMPLETED` olmalıdır; yarım kalmış bir akışı önce arayüzde tamamla. Servis yeniden başlayınca simülasyon durumu sıfırlanır.
+
 ## Kapsam
 
-Bu başlangıç sürümünde tek robot, durum sorgusu, durdurma komutu ve bağlantı/hata görünümü var. Veritabanı, giriş sistemi, hareket komutu, harita, görev planlama ve canlı ROS telemetrisi yok. Dış ağa açmadan önce kimlik doğrulama ve TLS eklenmeli; şimdilik yerel geliştirme içindir.
+Bu sürümde tek robot, durum/durdurma işlemleri, bağlantı/hata görünümü ve tek asansör için sıralı bir simülasyon var. Elektronik kapı, geçiş ışığı ve yangın alarmı case'leri henüz uygulanmadı. Veritabanı, giriş sistemi, fiziksel hareket, harita ve canlı ROS telemetrisi yok. Dış ağa açmadan önce kimlik doğrulama ve TLS eklenmeli; şimdilik yerel geliştirme içindir.

@@ -28,3 +28,28 @@ message StopResponse {
   string message = 2;
   RobotStatus status = 3;
 }
+
+// One simulated elevator. Commands never move a physical robot or elevator.
+service ElevatorService {
+  rpc GetStatus(GetElevatorStatusRequest) returns (ElevatorStatus);
+  rpc Call(CallElevatorRequest) returns (ElevatorStatus);
+  rpc SelectFloor(SelectFloorRequest) returns (ElevatorStatus);
+  rpc AdvanceSimulation(AdvanceElevatorSimulationRequest) returns (ElevatorStatus);
+}
+
+message GetElevatorStatusRequest {}
+message CallElevatorRequest { int32 pickup_floor = 1; }
+message SelectFloorRequest { int32 destination_floor = 1; }
+message AdvanceElevatorSimulationRequest { string expected_state = 1; }
+
+message ElevatorStatus {
+  string elevator_id = 1;
+  string mode = 2;
+  string state = 3;
+  int32 current_floor = 4;
+  optional int32 pickup_floor = 5;
+  optional int32 destination_floor = 6;
+  bool doors_open = 7;
+  bool robot_in_cabin = 8;
+  int64 observed_at_unix_ms = 9;
+}

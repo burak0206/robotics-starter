@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package robotics.v1;
+
+option java_multiple_files = true;
+option java_package = "dev.robotics.proto";
+
+service RobotService {
+  rpc GetStatus(GetStatusRequest) returns (RobotStatus);
+  rpc Stop(StopRequest) returns (StopResponse);
+}
+
+message GetStatusRequest {}
+message StopRequest {}
+
+message RobotStatus {
+  string robot_id = 1;
+  string name = 2;
+  string mode = 3;
+  string state = 4;
+  optional uint32 battery_percent = 5;
+  optional double linear_velocity_mps = 6;
+  int64 observed_at_unix_ms = 7;
+}
+
+message StopResponse {
+  bool accepted = 1;
+  string message = 2;
+  RobotStatus status = 3;
+}

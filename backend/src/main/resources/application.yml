@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: robotics-backend
+
+server:
+  port: ${SERVER_PORT:8080}
+
+robot:
+  grpc:
+    host: ${ROBOT_GRPC_HOST:localhost}
+    port: ${ROBOT_GRPC_PORT:50051}

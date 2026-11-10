@@ -1,0 +1,32 @@
+name: robotics-starter
+
+services:
+  robot-agent:
+    build:
+      context: .
+      dockerfile: robot-agent/Dockerfile
+    environment:
+      GRPC_ADDR: 0.0.0.0:50051
+      ROBOT_MODE: simulation
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      ROBOT_GRPC_HOST: robot-agent
+      ROBOT_GRPC_PORT: 50051
+    depends_on:
+      - robot-agent
+    ports:
+      - "127.0.0.1:8080:8080"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:5173:80"
+

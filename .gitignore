@@ -1,0 +1,14 @@
+# Build outputs and local settings
+**/node_modules/
+**/dist/
+**/target/
+**/build/
+**/.gradle/
+*.tsbuildinfo
+.env
+.idea/
+*.iml
+.DS_Store
+test-results/
+__pycache__/
+

@@ -1037,6 +1037,19 @@ footer > span:first-child {
   padding-top: 13px;
   margin-top: 0;
 }
+.door-steps {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.door-control-label {
+  color: #91a69c;
+  font-size: 11px;
+}
+.door-controls .elevator-control > p {
+  color: #7d9889;
+  font-size: 10px;
+  line-height: 1.7;
+  margin: 0;
+}
 @media (max-width: 850px) {
   .elevator-controls {
     grid-template-columns: 1fr 1fr;

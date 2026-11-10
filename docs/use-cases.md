@@ -41,11 +41,42 @@ gRPC sözleşmesi `proto/robot.proto` içindeki `ElevatorService`'tir. Gerçek a
 - Cihaz bağlantı kaybı, kapı engeli, zaman aşımı ve görev iptali henüz bu case'e eklenmemiştir.
 - Çoklu robot kuyruğu, asansör rezervasyonu, kalıcı olay kaydı ve tekrar başlatma sonrası kurtarma sonraki adımlardır.
 
+## Case 02: elektronik kapı geçişi
+
+Tek robot ve tek kapı (`door-01`). Bu case de `ROBOT_MODE` ayarından bağımsız bir simülasyondur. Kapının açılması, robotun eşikten çıkması ve kapının kapanması operatör tarafından simüle edilen geri bildirimlerdir. Fiziksel kapı veya ROS hareket komutu gönderilmez.
+
+| Durum | Kabul edilen işlem | Sonuç |
+| --- | --- | --- |
+| `IDLE` / `COMPLETED` | Geçiş iste | `OPENING` — kapı henüz kapalı, geçiş izni yok |
+| `OPENING` | Kapının açıldığını simüle et | `READY_TO_PASS` — kapı açık, bu geçiş için izin var |
+| `READY_TO_PASS` | Geçişi başlat | `PASSING` — robot kapı eşiğinde, kapı açık |
+| `PASSING` | Robotun geçişini bitirdiğini simüle et | `CLOSING` — eşik boş, izin kaldırıldı; kapanış bekleniyor |
+| `CLOSING` | Kapının kapandığını simüle et | `COMPLETED` — kapı kapalı, eşik boş |
+
+Açılma isteğinin kabulü kapının açık olduğu anlamına gelmez; `READY_TO_PASS` geri bildirimi gelmeden geçiş başlatılamaz. Robotun eşikten çıktığı doğrulanmadan kapanış aşamasına geçilmez. `CLOSING` sırasında kapı hâlâ açık görünür; ancak kapanış geri bildiriminden sonra kapalı kabul edilir. Geçiş sürerken ikinci bir talep reddedilir.
+
+### Kapı REST uçları
+
+| İstek | Gövde | Amaç |
+| --- | --- | --- |
+| `GET /api/door/status` | — | Kapı, izin ve robotun eşik durumunu oku |
+| `POST /api/door/request-passage` | — | Kapının açılması ve geçiş için talep oluştur |
+| `POST /api/door/start-passage` | — | Açık kapı doğrulamasından sonra geçişi başlat |
+| `POST /api/door/simulation/advance` | `{ "expectedState": "OPENING" }` | Beklenen kapı/robot geri bildirimini simüle et |
+
+gRPC sözleşmesi ortak proto içindeki `DoorService`'tir. Yanlış sıra, devam eden geçişe ikinci talep ve güncel durumla eşleşmeyen `expectedState` için `409`; eksik veya bilinmeyen `expectedState` için `400` döner. Hatalı işlemler durumu değiştirmez. `READY_TO_PASS` aşamasında simülasyon ilerletme yerine açıkça `start-passage` kullanılmalıdır.
+
+### Kapı case'inin sınırları
+
+- Kapı sensörü ve robot konumu gerçek cihazlardan okunmaz; arayüzdeki bütün kapı olayları simülasyondur.
+- Kapı engeli, açılma zaman aşımı, yangın alarmı, görev iptali ve gerçek cihaz adaptörü henüz yoktur.
+- Tek geçiş durumu bellektedir. Yeniden başlatma durumu sıfırlar; kalıcı olay kimliği ve farklı geçişler arasında tekrar gönderim koruması henüz yoktur.
+- Asansör ve kapı case'leri bağımsızdır; bu sürüm ikisini bir robot rotasında birleştirmez.
+
 ## Sonraki case'ler
 
 | Case | İlk uygulanacak davranış | Gerekli geri bildirim |
 | --- | --- | --- |
-| Elektronik kapı | Geçiş talebi → açılma doğrulaması → geçiş → çıkış | Kapı açık/kapalı, robot geçişi tamamladı |
 | Geçiş ışığı | Ortak bir geçiş noktasında robot için izin/bekle akışı | Geçişin doluluğu ve kontrolcü izin durumu |
 | Yangın alarmı | Alarm olayını robot görevlerine yansıt; normal bina geçişlerini iptal et | Alarm aktif/pasif, robot görev iptali sonucu |
 

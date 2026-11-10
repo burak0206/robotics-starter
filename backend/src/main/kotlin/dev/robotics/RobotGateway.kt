@@ -11,6 +11,12 @@ import dev.robotics.proto.ElevatorServiceGrpc
 import dev.robotics.proto.ElevatorStatus
 import dev.robotics.proto.GetElevatorStatusRequest
 import dev.robotics.proto.SelectFloorRequest
+import dev.robotics.proto.AdvanceDoorSimulationRequest
+import dev.robotics.proto.DoorServiceGrpc
+import dev.robotics.proto.DoorStatus
+import dev.robotics.proto.GetDoorStatusRequest
+import dev.robotics.proto.RequestDoorPassageRequest
+import dev.robotics.proto.StartDoorPassageRequest
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import io.grpc.StatusRuntimeException
@@ -29,6 +35,7 @@ class RobotGateway(
         .build()
     private val stub = RobotServiceGrpc.newBlockingStub(channel)
     private val elevatorStub = ElevatorServiceGrpc.newBlockingStub(channel)
+    private val doorStub = DoorServiceGrpc.newBlockingStub(channel)
 
     fun status(): RobotStatus = stub.withDeadlineAfter(2, TimeUnit.SECONDS)
         .getStatus(GetStatusRequest.getDefaultInstance())
@@ -62,6 +69,32 @@ class RobotGateway(
         throw ElevatorRpcException(failure)
     }
 
+    fun doorStatus(): DoorStatus = doorCall {
+        doorStub.withDeadlineAfter(2, TimeUnit.SECONDS)
+            .getStatus(GetDoorStatusRequest.getDefaultInstance())
+    }
+
+    fun requestDoorPassage(): DoorStatus = doorCall {
+        doorStub.withDeadlineAfter(2, TimeUnit.SECONDS)
+            .requestPassage(RequestDoorPassageRequest.getDefaultInstance())
+    }
+
+    fun startDoorPassage(): DoorStatus = doorCall {
+        doorStub.withDeadlineAfter(2, TimeUnit.SECONDS)
+            .startPassage(StartDoorPassageRequest.getDefaultInstance())
+    }
+
+    fun advanceDoorSimulation(expectedState: String): DoorStatus = doorCall {
+        doorStub.withDeadlineAfter(2, TimeUnit.SECONDS)
+            .advanceSimulation(AdvanceDoorSimulationRequest.newBuilder().setExpectedState(expectedState).build())
+    }
+
+    private fun doorCall(operation: () -> DoorStatus): DoorStatus = try {
+        operation()
+    } catch (failure: StatusRuntimeException) {
+        throw DoorRpcException(failure)
+    }
+
     @PreDestroy
     override fun close() {
         channel.shutdownNow()
@@ -69,3 +102,4 @@ class RobotGateway(
 }
 
 class ElevatorRpcException(val failure: StatusRuntimeException) : RuntimeException(failure)
+class DoorRpcException(val failure: StatusRuntimeException) : RuntimeException(failure)

@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { request, type ElevatorStatus } from "./api";
+import { useEffect, useState } from "react";
+import type { ElevatorStatus } from "./api";
+import { useScenario } from "./useScenario";
 
 const floors = [0, 1, 2, 3, 4, 5];
 const floorName = (floor: number) => (floor === 0 ? "0 · Giriş" : `${floor}. kat`);
@@ -42,103 +43,16 @@ const stepIndex: Record<string, number> = {
 };
 
 export function ElevatorScenario() {
-  const [status, setStatus] = useState<ElevatorStatus | null>(null);
-  const [connection, setConnection] = useState<"connecting" | "online" | "offline">("connecting");
-  const [pollError, setPollError] = useState<string | null>(null);
-  const [commandError, setCommandError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const { status, connection, pollError, commandError, notice, pending, command, refresh } =
+    useScenario<ElevatorStatus>("/api/elevator/status", "Asansör");
   const [pickupFloor, setPickupFloor] = useState(0);
   const [destinationFloor, setDestinationFloor] = useState(1);
-  const [pending, setPending] = useState(false);
-  const [retry, setRetry] = useState(0);
-  const pendingRef = useRef(false);
-  const generation = useRef(0);
-  const pollController = useRef<AbortController | null>(null);
-  const commandController = useRef<AbortController | null>(null);
-  const mounted = useRef(true);
-
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-      commandController.current?.abort();
-    };
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    let timer: ReturnType<typeof setTimeout>;
-    async function poll() {
-      if (!active) return;
-      if (pendingRef.current) {
-        timer = setTimeout(poll, 2000);
-        return;
-      }
-      const epoch = generation.current;
-      const controller = new AbortController();
-      pollController.current = controller;
-      const timeout = setTimeout(() => controller.abort(), 4000);
-      try {
-        const result = await request<ElevatorStatus>("/api/elevator/status", controller.signal);
-        if (active && epoch === generation.current) {
-          setStatus(result);
-          setConnection("online");
-          setPollError(null);
-        }
-      } catch (cause) {
-        if (active && epoch === generation.current) {
-          setConnection("offline");
-          setPollError(controller.signal.aborted ? "Asansör bağlantısı zaman aşımına uğradı." : (cause as Error).message);
-        }
-      } finally {
-        clearTimeout(timeout);
-        if (pollController.current === controller) pollController.current = null;
-        if (active) timer = setTimeout(poll, 2000);
-      }
-    }
-    void poll();
-    return () => {
-      active = false;
-      clearTimeout(timer);
-      pollController.current?.abort();
-    };
-  }, [retry]);
 
   useEffect(() => {
     if (status?.pickupFloor != null && destinationFloor === status.pickupFloor) {
       setDestinationFloor(status.pickupFloor === 0 ? 1 : 0);
     }
   }, [status?.pickupFloor, destinationFloor]);
-
-  async function command(path: string, successMessage: string, body?: unknown) {
-    if (pendingRef.current || connection !== "online") return;
-    pendingRef.current = true;
-    setPending(true);
-    setNotice(null);
-    setCommandError(null);
-    generation.current += 1;
-    pollController.current?.abort();
-    const controller = new AbortController();
-    commandController.current = controller;
-    const timeout = setTimeout(() => controller.abort(), 8000);
-    try {
-      const result = await request<ElevatorStatus>(path, controller.signal, "POST", body);
-      if (!mounted.current) return;
-      setStatus(result);
-      setConnection("online");
-      setPollError(null);
-      setNotice(successMessage);
-    } catch (cause) {
-      if (!mounted.current) return;
-      setCommandError(controller.signal.aborted ? "Asansör isteği zaman aşımına uğradı. Yeniden işlem yapmadan önce durumu kontrol et." : (cause as Error).message);
-      setConnection("offline");
-    } finally {
-      clearTimeout(timeout);
-      pendingRef.current = false;
-      if (commandController.current === controller) commandController.current = null;
-      if (mounted.current) setPending(false);
-    }
-  }
 
   const online = connection === "online";
   const state = status?.state ?? "";
@@ -165,7 +79,7 @@ export function ElevatorScenario() {
 
       {pollError && <div className="feedback error" role="alert">
         <span>{pollError}{status ? " Son bilinen simülasyon durumu gösteriliyor." : ""}</span>
-        <button onClick={() => setRetry(value => value + 1)} disabled={pending}>Asansör bağlantısını yenile</button>
+        <button onClick={refresh} disabled={pending}>Asansör bağlantısını yenile</button>
       </div>}
 
       <ol className="elevator-steps" aria-label="Asansör senaryosu adımları">

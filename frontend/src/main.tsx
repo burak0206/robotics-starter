@@ -2,6 +2,7 @@ import { StrictMode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { request, type RobotStatus, type StopResponse } from "./api";
 import { ElevatorScenario } from "./ElevatorScenario";
+import { DoorScenario } from "./DoorScenario";
 import "./style.css";
 
 type Connection = "connecting" | "online" | "offline";
@@ -385,6 +386,7 @@ function App() {
         </div>
 
         <ElevatorScenario />
+        <DoorScenario />
 
         <footer>
           <span>

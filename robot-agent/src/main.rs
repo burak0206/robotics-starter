@@ -1,9 +1,11 @@
 mod adapter;
+mod door;
 mod elevator;
 
 use std::{net::SocketAddr, sync::Arc, time::SystemTime};
 
 use adapter::{PublishError, Ros2Adapter};
+use door::DoorSimulator;
 use elevator::ElevatorSimulator;
 use tokio::sync::Mutex;
 use tonic::{transport::Server, Request, Response, Status};
@@ -14,6 +16,7 @@ pub mod proto {
 }
 
 use proto::{
+    door_service_server::DoorServiceServer,
     elevator_service_server::ElevatorServiceServer,
     robot_service_server::{RobotService, RobotServiceServer},
     GetStatusRequest, RobotStatus, StopRequest, StopResponse,
@@ -131,6 +134,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Server::builder()
         .add_service(RobotServiceServer::new(agent))
         .add_service(ElevatorServiceServer::new(ElevatorSimulator::default()))
+        .add_service(DoorServiceServer::new(DoorSimulator::default()))
         .serve_with_shutdown(addr, async {
             if let Err(error) = tokio::signal::ctrl_c().await {
                 warn!(%error, "Could not register shutdown signal");

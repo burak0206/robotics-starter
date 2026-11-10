@@ -53,3 +53,26 @@ message ElevatorStatus {
   bool robot_in_cabin = 8;
   int64 observed_at_unix_ms = 9;
 }
+
+// One simulated door. Commands never operate a physical door or robot.
+service DoorService {
+  rpc GetStatus(GetDoorStatusRequest) returns (DoorStatus);
+  rpc RequestPassage(RequestDoorPassageRequest) returns (DoorStatus);
+  rpc StartPassage(StartDoorPassageRequest) returns (DoorStatus);
+  rpc AdvanceSimulation(AdvanceDoorSimulationRequest) returns (DoorStatus);
+}
+
+message GetDoorStatusRequest {}
+message RequestDoorPassageRequest {}
+message StartDoorPassageRequest {}
+message AdvanceDoorSimulationRequest { string expected_state = 1; }
+
+message DoorStatus {
+  string door_id = 1;
+  string mode = 2;
+  string state = 3;
+  bool door_open = 4;
+  bool passage_allowed = 5;
+  bool robot_in_doorway = 6;
+  int64 observed_at_unix_ms = 7;
+}

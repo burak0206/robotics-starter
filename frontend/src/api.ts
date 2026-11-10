@@ -26,6 +26,23 @@ export interface ElevatorStatus {
   observedAtUnixMs: number;
 }
 
+export interface DoorStatus {
+  doorId: string;
+  mode: "simulation";
+  state: string;
+  doorOpen: boolean;
+  passageAllowed: boolean;
+  robotInDoorway: boolean;
+  observedAtUnixMs: number;
+}
+
+export class ApiError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export async function request<T>(
   path: string,
   signal: AbortSignal,
@@ -45,7 +62,8 @@ export async function request<T>(
     const error = (await response.json().catch(() => null)) as {
       message?: string;
     } | null;
-    throw new Error(
+    throw new ApiError(
+      response.status,
       error?.message ?? `Bağlantı isteği başarısız (${response.status}).`,
     );
   }

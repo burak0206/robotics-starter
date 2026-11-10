@@ -2,6 +2,8 @@
 
 Robotların kapılar, asansörler ve bina olaylarıyla birlikte çalışacağı senaryolar için küçük bir başlangıç. **Asansör çağırma ve kat seçimi**, **elektronik kapı geçişi** ve **yangın alarmında geçişlerin iptali** case'lerini içerir; mevcut robot durum ekranı ve **durdur** komutu da korunur. Donanım gerektirmeden simülasyonla açılır.
 
+**Ürün ve teknik plan:** [Ürün kapsamı ve teknik yön](docs/product-scope.md); mevcut durum/boşluklar, modül ve komut yetkisi sınırları, edge/cloud, entegrasyon matrisi ve aşamalı MVP kabul kriterlerini içerir. Buradaki çalıştırılabilir demolar, plandaki kimlikli ve yetkilendirilmiş ürün MVP'sinin tamamlandığı anlamına gelmez. Mevcut senaryo sözleşmeleri [use-cases.md](docs/use-cases.md) içindedir.
+
 ```text
 React / TypeScript web
         │ REST / JSON

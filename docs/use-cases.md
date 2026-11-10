@@ -1,5 +1,7 @@
 # Robot–bina entegrasyonu
 
+Bu dosya **mevcut simülasyonların** davranış ve API sözleşmesidir. Ürün vizyonu, hedef mimari, güvenlik/komut yetkisi, sürüm sınırları ve sonraki MVP kabul kriterleri [Ürün kapsamı ve teknik yön](product-scope.md) belgesindedir. Buradaki durum akışları henüz authenticated robot görev yürütmesi veya saha doğrulaması değildir.
+
 Amaç; robotların elektronik kapı, asansör, geçiş ışığı ve yangın alarmı gibi bina sistemleriyle ortak senaryolar üzerinden çalışmasını sağlamak. Ürün çekirdeği komutları, cihaz geri bildirimlerini ve robotun görev adımlarını birbirine bağlar.
 
 Web arayüzü operatörün senaryoyu izlemesini ve simülasyonu denemesini sağlar. Kotlin backend REST sınırını ve istek doğrulamasını, Rust servisi gRPC üzerinden robot/cihaz bağlantısı sınırını sağlar. İlk sürümde süreç durumu bellekte tutulur.
@@ -76,6 +78,8 @@ gRPC sözleşmesi ortak proto içindeki `DoorService`'tir. Yanlış sıra, devam
 ## Case 03: yangın alarmında geçişlerin iptali
 
 Alarm, kapı ve asansör simülasyonlarının paylaştığı bir kuraldır. Tek alarm (`fire-alarm-01`) simüle edilir; gerçek yangın paneline, bina kontrolcülerine veya ROS hareketine komut gönderilmez. Bu case yalnızca robot–bina iş akışlarını iptal eder.
+
+Bu sabit demo iptal politikası tesisin yangın prosedürü olarak taşınmaz. Hedef üründeki davranış, onaylı `SiteEmergencyPolicy` ve gerçek cihaz/robot yetenekleriyle belirlenecektir; aşağıdaki akış yalnızca mevcut kodun açıklamasıdır.
 
 | İşlem | Sonuç |
 | --- | --- |

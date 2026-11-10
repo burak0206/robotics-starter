@@ -5,6 +5,8 @@ use std::{sync::Arc, time::SystemTime};
 use tokio::sync::Mutex;
 use tonic::{Request, Response, Status};
 
+use crate::fire_alarm::{alarm_active_error, AlarmGate};
+
 use crate::proto::{
     elevator_service_server::ElevatorService, AdvanceElevatorSimulationRequest,
     CallElevatorRequest, ElevatorStatus, GetElevatorStatusRequest, SelectFloorRequest,
@@ -12,6 +14,7 @@ use crate::proto::{
 
 #[derive(Debug)]
 enum ElevatorError {
+    RecoveryRequired,
     InvalidFloor,
     Busy,
     BoardingNotConfirmed,
@@ -26,6 +29,9 @@ enum ElevatorError {
 impl From<ElevatorError> for Status {
     fn from(error: ElevatorError) -> Self {
         match error {
+            ElevatorError::RecoveryRequired => Self::failed_precondition(
+                "Asansör geçişi iptal edildi. Simülasyonu açıkça sıfırlamadan devam edilemez.",
+            ),
             ElevatorError::InvalidFloor => {
                 Self::invalid_argument("Kat 0 ile 5 arasında olmalıdır.")
             }
@@ -98,14 +104,20 @@ struct Elevator {
     current_floor: i32,
     pickup_floor: Option<i32>,
     destination_floor: Option<i32>,
+    cancelled: bool,
 }
 
 impl Elevator {
-    fn snapshot(&self) -> ElevatorStatus {
+    fn snapshot(&self, fire_alarm_active: bool) -> ElevatorStatus {
         ElevatorStatus {
             elevator_id: "elevator-01".into(),
             mode: "simulation".into(),
-            state: self.phase.name().into(),
+            state: if self.cancelled {
+                "CANCELLED"
+            } else {
+                self.phase.name()
+            }
+            .into(),
             current_floor: self.current_floor,
             pickup_floor: self.pickup_floor,
             destination_floor: self.destination_floor,
@@ -121,6 +133,8 @@ impl Elevator {
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_millis() as i64,
+            fire_alarm_active,
+            recovery_required: self.cancelled,
         }
     }
 
@@ -132,6 +146,7 @@ impl Elevator {
     }
 
     fn call(&mut self, pickup_floor: i32) -> Result<(), ElevatorError> {
+        self.ensure_recovered()?;
         Self::check_floor(pickup_floor)?;
         if !matches!(self.phase, Phase::Idle | Phase::Completed) {
             return Err(ElevatorError::Busy);
@@ -143,6 +158,7 @@ impl Elevator {
     }
 
     fn select_floor(&mut self, destination_floor: i32) -> Result<(), ElevatorError> {
+        self.ensure_recovered()?;
         Self::check_floor(destination_floor)?;
         if self.phase != Phase::ReadyForDestination {
             return Err(ElevatorError::BoardingNotConfirmed);
@@ -156,6 +172,7 @@ impl Elevator {
     }
 
     fn advance(&mut self, expected_state: &str) -> Result<(), ElevatorError> {
+        self.ensure_recovered()?;
         let expected = Phase::parse(expected_state).ok_or(ElevatorError::InvalidExpectedState)?;
         if self.phase != expected {
             return Err(ElevatorError::StaleExpectedState);
@@ -179,11 +196,51 @@ impl Elevator {
         };
         Ok(())
     }
+
+    fn ensure_recovered(&self) -> Result<(), ElevatorError> {
+        if self.cancelled {
+            return Err(ElevatorError::RecoveryRequired);
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Default)]
 pub struct ElevatorSimulator {
     elevator: Arc<Mutex<Elevator>>,
+    alarm: AlarmGate,
+}
+
+impl ElevatorSimulator {
+    pub fn new(alarm: AlarmGate) -> Self {
+        Self {
+            elevator: Arc::default(),
+            alarm,
+        }
+    }
+
+    // These helpers acquire only the domain mutex; the caller owns the alarm gate.
+    pub(super) async fn cancel_for_alarm(&self) {
+        let mut elevator = self.elevator.lock().await;
+        if !matches!(elevator.phase, Phase::Idle | Phase::Completed) {
+            elevator.cancelled = true;
+        }
+    }
+
+    pub(super) async fn is_cancelled_under_gate(&self) -> bool {
+        self.elevator.lock().await.cancelled
+    }
+
+    pub(super) async fn reset_cancelled_under_gate(&self) {
+        let mut elevator = self.elevator.lock().await;
+        if elevator.cancelled {
+            let current_floor = elevator.current_floor;
+            *elevator = Elevator {
+                current_floor,
+                ..Elevator::default()
+            };
+        }
+    }
 }
 
 #[tonic::async_trait]
@@ -192,34 +249,47 @@ impl ElevatorService for ElevatorSimulator {
         &self,
         _request: Request<GetElevatorStatusRequest>,
     ) -> Result<Response<ElevatorStatus>, Status> {
-        Ok(Response::new(self.elevator.lock().await.snapshot()))
+        let alarm = self.alarm.read().await;
+        Ok(Response::new(self.elevator.lock().await.snapshot(*alarm)))
     }
 
     async fn call(
         &self,
         request: Request<CallElevatorRequest>,
     ) -> Result<Response<ElevatorStatus>, Status> {
+        let alarm = self.alarm.read().await;
+        if *alarm {
+            return Err(alarm_active_error());
+        }
         let mut elevator = self.elevator.lock().await;
         elevator.call(request.into_inner().pickup_floor)?;
-        Ok(Response::new(elevator.snapshot()))
+        Ok(Response::new(elevator.snapshot(*alarm)))
     }
 
     async fn select_floor(
         &self,
         request: Request<SelectFloorRequest>,
     ) -> Result<Response<ElevatorStatus>, Status> {
+        let alarm = self.alarm.read().await;
+        if *alarm {
+            return Err(alarm_active_error());
+        }
         let mut elevator = self.elevator.lock().await;
         elevator.select_floor(request.into_inner().destination_floor)?;
-        Ok(Response::new(elevator.snapshot()))
+        Ok(Response::new(elevator.snapshot(*alarm)))
     }
 
     async fn advance_simulation(
         &self,
         request: Request<AdvanceElevatorSimulationRequest>,
     ) -> Result<Response<ElevatorStatus>, Status> {
+        let alarm = self.alarm.read().await;
+        if *alarm {
+            return Err(alarm_active_error());
+        }
         let mut elevator = self.elevator.lock().await;
         elevator.advance(&request.into_inner().expected_state)?;
-        Ok(Response::new(elevator.snapshot()))
+        Ok(Response::new(elevator.snapshot(*alarm)))
     }
 }
 
@@ -233,7 +303,7 @@ mod tests {
     }
 
     fn semantic_snapshot(elevator: &Elevator) -> ElevatorStatus {
-        let mut status = elevator.snapshot();
+        let mut status = elevator.snapshot(false);
         status.observed_at_unix_ms = 0;
         status
     }
@@ -241,7 +311,7 @@ mod tests {
     #[test]
     fn lifecycle_requires_boarding_before_destination_and_exit_before_reuse() {
         let mut elevator = Elevator::default();
-        let initial = elevator.snapshot();
+        let initial = elevator.snapshot(false);
         assert_eq!(initial.mode, "simulation");
         assert_eq!(initial.state, "IDLE");
         assert_eq!(initial.current_floor, 0);
@@ -253,37 +323,37 @@ mod tests {
         elevator.call(2).unwrap();
         assert_eq!(elevator.phase, Phase::Calling);
         assert_eq!(elevator.current_floor, 0);
-        assert!(!elevator.snapshot().doors_open);
+        assert!(!elevator.snapshot(false).doors_open);
 
         elevator.advance("CALLING").unwrap();
         assert_eq!(elevator.current_floor, 2);
         assert_eq!(elevator.phase, Phase::WaitingForBoarding);
-        assert!(elevator.snapshot().doors_open);
-        assert!(!elevator.snapshot().robot_in_cabin);
+        assert!(elevator.snapshot(false).doors_open);
+        assert!(!elevator.snapshot(false).robot_in_cabin);
 
         elevator.advance("WAITING_FOR_BOARDING").unwrap();
         assert_eq!(elevator.phase, Phase::ReadyForDestination);
-        assert!(elevator.snapshot().doors_open);
-        assert!(elevator.snapshot().robot_in_cabin);
+        assert!(elevator.snapshot(false).doors_open);
+        assert!(elevator.snapshot(false).robot_in_cabin);
 
         elevator.select_floor(5).unwrap();
         assert_eq!(elevator.phase, Phase::Moving);
         assert_eq!(elevator.current_floor, 2);
         assert_eq!(elevator.destination_floor, Some(5));
-        assert!(!elevator.snapshot().doors_open);
-        assert!(elevator.snapshot().robot_in_cabin);
+        assert!(!elevator.snapshot(false).doors_open);
+        assert!(elevator.snapshot(false).robot_in_cabin);
 
         elevator.advance("MOVING").unwrap();
         assert_eq!(elevator.phase, Phase::WaitingForExit);
         assert_eq!(elevator.current_floor, 5);
-        assert!(elevator.snapshot().doors_open);
-        assert!(elevator.snapshot().robot_in_cabin);
+        assert!(elevator.snapshot(false).doors_open);
+        assert!(elevator.snapshot(false).robot_in_cabin);
         assert_eq!(error_code(elevator.call(0)), Code::FailedPrecondition);
 
         elevator.advance("WAITING_FOR_EXIT").unwrap();
         assert_eq!(elevator.phase, Phase::Completed);
-        assert!(!elevator.snapshot().doors_open);
-        assert!(!elevator.snapshot().robot_in_cabin);
+        assert!(!elevator.snapshot(false).doors_open);
+        assert!(!elevator.snapshot(false).robot_in_cabin);
 
         elevator.call(0).unwrap();
         assert_eq!(elevator.current_floor, 5);
@@ -356,7 +426,7 @@ mod tests {
         elevator.advance("CALLING").unwrap();
         elevator.advance("WAITING_FOR_BOARDING").unwrap();
         elevator.select_floor(0).unwrap();
-        assert_eq!(elevator.snapshot().destination_floor, Some(0));
+        assert_eq!(elevator.snapshot(false).destination_floor, Some(0));
         elevator.advance("MOVING").unwrap();
         assert_eq!(elevator.current_floor, 0);
     }

@@ -8,6 +8,7 @@ const stateNames: Record<string, string> = {
   PASSING: "Robot kapıdan geçiyor",
   CLOSING: "Robot çıktı, kapı kapanışı bekleniyor",
   COMPLETED: "Kapı geçişi tamamlandı",
+  CANCELLED: "Yangın alarmı nedeniyle iptal edildi",
 };
 const advances: Record<string, { label: string; notice: string }> = {
   OPENING: {
@@ -33,8 +34,9 @@ export function DoorScenario() {
     useScenario<DoorStatus>("/api/door/status", "Kapı");
   const online = connection === "online";
   const state = status?.state ?? "";
-  const canRequest = online && !pending && (state === "IDLE" || state === "COMPLETED");
-  const canStart = online && !pending && state === "READY_TO_PASS"
+  const blocked = Boolean(status?.fireAlarmActive || status?.recoveryRequired);
+  const canRequest = online && !pending && !blocked && (state === "IDLE" || state === "COMPLETED");
+  const canStart = online && !pending && !blocked && state === "READY_TO_PASS"
     && status?.doorOpen && status.passageAllowed && !status.robotInDoorway;
   const advance = advances[state];
 
@@ -72,6 +74,9 @@ export function DoorScenario() {
       </div>
 
       <p className="elevator-state" role="status">{status ? stateNames[state] ?? state : "Kapı verisi bekleniyor"}</p>
+      {blocked && <p className="scenario-interlock">{status?.fireAlarmActive
+        ? "Yangın alarmı simülasyonu aktif; kapı senaryosu komutları engelleniyor."
+        : "Alarm temizlendi; devam etmek için yangın alarmı panelinden iptal edilen simülasyonları sıfırla."} Son kapı ve robot konumu korunur.</p>}
       <div className="elevator-controls door-controls">
         <div className="elevator-control">
           <span className="door-control-label">1. Erişim isteği</span>
@@ -85,12 +90,12 @@ export function DoorScenario() {
         </div>
         <div className="elevator-advance">
           <span>Simüle edilmiş sensör olayı</span>
-          <button className="elevator-button primary" disabled={!online || pending || !advance} onClick={() => advance && void command("/api/door/simulation/advance", advance.notice, { expectedState: state })}>{pending ? "Gönderiliyor…" : advance?.label ?? "Olay bekleniyor"}</button>
+          <button className="elevator-button primary" disabled={!online || pending || blocked || !advance} onClick={() => advance && void command("/api/door/simulation/advance", advance.notice, { expectedState: state })}>{pending ? "Gönderiliyor…" : advance?.label ?? "Olay bekleniyor"}</button>
           <p>Açılış, robotun çıkışı ve kapanış sensörlerini sırayla doğrula.</p>
         </div>
       </div>
 
-      <div className="elevator-feedback" role="status">{notice && <span className="success">{notice}</span>}</div>
+      <div className="elevator-feedback" role="status">{notice && !blocked && <span className="success">{notice}</span>}</div>
       {commandError && <p className="elevator-command-error" role="alert">{commandError}</p>}
       <p className="elevator-note">Bu case tamamen simülasyondur. Gerçek kapıya veya robota hareket komutu göndermez; açılış, geçiş ve kapanış sensör olaylarını sen ilerletirsin.</p>
     </section>

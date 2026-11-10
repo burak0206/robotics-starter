@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiError, request } from "./api";
 
+const refreshEvent = "rover:refresh-scenario-statuses";
+
+/** Invalidate affected snapshots after an operation spanning several cases. */
+export function refreshScenarioStatuses(...statusPaths: string[]) {
+  window.dispatchEvent(new CustomEvent<string[]>(refreshEvent, { detail: statusPaths }));
+}
+
 /** Shared transport state; each scenario keeps its own actions and rules. */
 export function useScenario<T>(statusPath: string, name: string) {
   const [status, setStatus] = useState<T | null>(null);
@@ -23,6 +30,24 @@ export function useScenario<T>(statusPath: string, name: string) {
       commandController.current?.abort();
     };
   }, []);
+
+  useEffect(() => {
+    function invalidate(event: Event) {
+      const paths = (event as CustomEvent<string[]>).detail;
+      if (!paths?.includes(statusPath)) return;
+      generation.current += 1;
+      pollController.current?.abort();
+      commandController.current?.abort();
+      commandController.current = null;
+      pendingRef.current = false;
+      setPending(false);
+      setNotice(null);
+      setConnection("connecting");
+      setRetry(value => value + 1);
+    }
+    window.addEventListener(refreshEvent, invalidate);
+    return () => window.removeEventListener(refreshEvent, invalidate);
+  }, [statusPath]);
 
   useEffect(() => {
     let active = true;
@@ -64,25 +89,26 @@ export function useScenario<T>(statusPath: string, name: string) {
   }, [statusPath, name, retry]);
 
   async function command(path: string, successMessage: string, body?: unknown) {
-    if (pendingRef.current || connection !== "online") return;
+    if (pendingRef.current || connection !== "online") return false;
     pendingRef.current = true;
     setPending(true);
     setNotice(null);
     setCommandError(null);
-    generation.current += 1;
+    const epoch = ++generation.current;
     pollController.current?.abort();
     const controller = new AbortController();
     commandController.current = controller;
     const timeout = setTimeout(() => controller.abort(), 8000);
     try {
       const result = await request<T>(path, controller.signal, "POST", body);
-      if (!mounted.current) return;
+      if (!mounted.current || epoch !== generation.current) return false;
       setStatus(result);
       setConnection("online");
       setPollError(null);
       setNotice(successMessage);
+      return true;
     } catch (cause) {
-      if (!mounted.current) return;
+      if (!mounted.current || epoch !== generation.current) return false;
       setCommandError(controller.signal.aborted ? `${name} isteği zaman aşımına uğradı. Yeniden işlem yapmadan önce durumu kontrol et.` : (cause as Error).message);
       if (cause instanceof ApiError && cause.status >= 400 && cause.status < 500) {
         // A rejected action still reached the service. Refresh the actual state,
@@ -92,11 +118,14 @@ export function useScenario<T>(statusPath: string, name: string) {
       } else {
         setConnection("offline");
       }
+      return false;
     } finally {
       clearTimeout(timeout);
-      pendingRef.current = false;
-      if (commandController.current === controller) commandController.current = null;
-      if (mounted.current) setPending(false);
+      if (commandController.current === controller) {
+        commandController.current = null;
+        pendingRef.current = false;
+        if (mounted.current) setPending(false);
+      }
     }
   }
 

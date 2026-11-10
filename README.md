@@ -1,6 +1,6 @@
 # Robot–bina entegrasyonu başlangıç projesi
 
-Robotların kapılar, asansörler ve bina olaylarıyla birlikte çalışacağı senaryolar için küçük bir başlangıç. **Asansör çağırma ve kat seçimi** ile **elektronik kapı geçişi** case'lerini içerir; mevcut robot durum ekranı ve **durdur** komutu da korunur. Donanım gerektirmeden simülasyonla açılır.
+Robotların kapılar, asansörler ve bina olaylarıyla birlikte çalışacağı senaryolar için küçük bir başlangıç. **Asansör çağırma ve kat seçimi**, **elektronik kapı geçişi** ve **yangın alarmında geçişlerin iptali** case'lerini içerir; mevcut robot durum ekranı ve **durdur** komutu da korunur. Donanım gerektirmeden simülasyonla açılır.
 
 ```text
 React / TypeScript web
@@ -12,7 +12,8 @@ Spring Boot / Kotlin
 Rust / tonic robot-agent
         ├── RobotService → simulation / ros2 (/cmd_vel)
         ├── ElevatorService → asansör case simülasyonu
-        └── DoorService → kapı geçişi simülasyonu
+        ├── DoorService → kapı geçişi simülasyonu
+        └── FireAlarmService → ortak alarm/iptal ve simülasyon kurtarma
 ```
 
 ## Hızlı başlangıç
@@ -35,6 +36,8 @@ Simülasyon başlangıçta `IDLE`, %84 pil ve 0 m/s hız döndürür. Durdurunca
 Web'deki asansör bölümünde giriş katını seçip **Asansörü çağır** ile başla. Varış/kapı açılışı ve kabine girişi simüle ettikten sonra hedef katı seç; varışı ve kabinden çıkışı simüle ederek case'i tamamla. Katlar 0–5 arasındadır. Asansör case'i her zaman simülasyondur ve gerçek robot/asansör hareketi başlatmaz. [Case sözleşmesi ve sonraki entegrasyonlar](docs/use-cases.md).
 
 Kapı bölümünde **Geçiş iste** ile başla. Kapı açılışını simüle ettikten sonra **Geçişi başlat** açılır. Robotun geçişini bitirdiğini ve ardından kapının kapandığını simüle ederek akışı tamamla. Kapı açıldığı doğrulanmadan geçiş başlatılamaz; kapanış aşaması robot eşikten çıktıktan sonra başlar. Bu case de fiziksel kapı veya robot hareketi başlatmaz.
+
+Yangın alarmı bölümündeki **Yangın alarmını simüle et**, devam eden kapı/asansör case'lerini `CANCELLED` yapar ve alarm aktifken normal işlemleri engeller. İptal, son bilinen kapı/kat/robot konumunu değiştirmez. **Alarmı temizle** otomatik devam ettirmez; **İptal edilen simülasyonları sıfırla** ile yalnızca iptal edilmiş sanal akışlar başlangıca alınır. Bu açık sıfırlama sanal kapı ve robot durumunu da yeniler; fiziksel bir kurtarma işlemi değildir.
 
 ## Yerel geliştirme
 
@@ -151,6 +154,16 @@ python3 scripts/door_smoke.py --base-url http://localhost:5173
 
 Her case'in durumu `IDLE` veya `COMPLETED` olmalıdır; yarım kalmış bir akışı önce arayüzde tamamla. Servis yeniden başlayınca simülasyon durumu sıfırlanır.
 
+Yangın alarmının iki case'i birlikte iptal ettiğini, konumları koruduğunu ve otomatik devam etmediğini doğrulamak için:
+
+```sh
+python3 scripts/fire_alarm_smoke.py
+# Web proxy'si üzerinden:
+python3 scripts/fire_alarm_smoke.py --base-url http://localhost:5173
+```
+
+Test öncesinde alarm pasif, kurtarma gerekmiyor ve kapı/asansör case'leri `IDLE` veya `COMPLETED` olmalıdır.
+
 ## Kapsam
 
-Bu sürümde tek robot, durum/durdurma işlemleri, bağlantı/hata görünümü ile tek asansör ve tek kapı için bağımsız simülasyonlar var. Geçiş ışığı ve yangın alarmı case'leri henüz uygulanmadı. Veritabanı, giriş sistemi, fiziksel hareket, harita ve canlı ROS telemetrisi yok. Dış ağa açmadan önce kimlik doğrulama ve TLS eklenmeli; şimdilik yerel geliştirme içindir.
+Bu sürümde tek robot, durum/durdurma işlemleri, bağlantı/hata görünümü, tek asansör/kapı simülasyonları ve normal akışları iptal eden ortak alarm kuralı var. Geçiş ışığı case'i henüz uygulanmadı. Alarm case'i gerçek yangın panelini, kapıyı, asansörü veya ROS hareketini yönetmez. Veritabanı, giriş sistemi, fiziksel hareket, harita ve canlı ROS telemetrisi yok. Dış ağa açmadan önce kimlik doğrulama ve TLS eklenmeli; şimdilik yerel geliştirme içindir.

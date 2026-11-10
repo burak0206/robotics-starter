@@ -52,6 +52,8 @@ message ElevatorStatus {
   bool doors_open = 7;
   bool robot_in_cabin = 8;
   int64 observed_at_unix_ms = 9;
+  bool fire_alarm_active = 10;
+  bool recovery_required = 11;
 }
 
 // One simulated door. Commands never operate a physical door or robot.
@@ -74,5 +76,30 @@ message DoorStatus {
   bool door_open = 4;
   bool passage_allowed = 5;
   bool robot_in_doorway = 6;
+  int64 observed_at_unix_ms = 7;
+  bool fire_alarm_active = 8;
+  bool recovery_required = 9;
+}
+
+// A simulated shared alarm cancels active building cases without inventing sensor feedback.
+service FireAlarmService {
+  rpc GetStatus(GetFireAlarmStatusRequest) returns (FireAlarmStatus);
+  rpc Activate(ActivateFireAlarmRequest) returns (FireAlarmStatus);
+  rpc Clear(ClearFireAlarmRequest) returns (FireAlarmStatus);
+  rpc ResetCancelledSimulations(ResetCancelledSimulationsRequest) returns (FireAlarmStatus);
+}
+
+message GetFireAlarmStatusRequest {}
+message ActivateFireAlarmRequest {}
+message ClearFireAlarmRequest {}
+message ResetCancelledSimulationsRequest {}
+
+message FireAlarmStatus {
+  string alarm_id = 1;
+  string mode = 2;
+  bool active = 3;
+  bool recovery_required = 4;
+  bool door_cancelled = 5;
+  bool elevator_cancelled = 6;
   int64 observed_at_unix_ms = 7;
 }

@@ -1050,6 +1050,46 @@ footer > span:first-child {
   line-height: 1.7;
   margin: 0;
 }
+.fire-alarm-section {
+  border-top: 3px solid #a7795d;
+}
+.fire-alarm-section.fire-alarm-active {
+  border-color: #ba7156;
+  background: #211c1b;
+}
+.fire-alarm-summary,
+.scenario-interlock {
+  border: 1px solid #59483a;
+  background: #392b211f;
+  border-radius: 7px;
+  padding: 12px 14px;
+  color: #ddbea0;
+  font-size: 12px;
+  line-height: 1.7;
+  margin-bottom: 14px;
+}
+.fire-alarm-summary.active {
+  border-color: #8e5946;
+  background: #542c213d;
+  color: #f0c2ac;
+}
+.fire-alarm-button {
+  background: #493023;
+  border-color: #936348;
+  color: #f1ceb3;
+}
+.fire-alarm-button:hover:enabled {
+  background: #62402c;
+}
+.elevator-controls.fire-alarm-controls {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 850px) {
+  .elevator-controls.fire-alarm-controls {
+    grid-template-columns: 1fr;
+    gap: 17px;
+  }
+}
 @media (max-width: 850px) {
   .elevator-controls {
     grid-template-columns: 1fr 1fr;

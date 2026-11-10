@@ -12,6 +12,7 @@ const stateNames: Record<string, string> = {
   MOVING: "Hedef kata gidiliyor",
   WAITING_FOR_EXIT: "Hedef katta, çıkış bekleniyor",
   COMPLETED: "Yolculuk tamamlandı",
+  CANCELLED: "Yangın alarmı nedeniyle iptal edildi",
 };
 const advances: Record<string, { label: string; notice: string }> = {
   CALLING: {
@@ -56,8 +57,9 @@ export function ElevatorScenario() {
 
   const online = connection === "online";
   const state = status?.state ?? "";
-  const canCall = online && !pending && (state === "IDLE" || state === "COMPLETED");
-  const canSelect = online && !pending && state === "READY_FOR_DESTINATION";
+  const blocked = Boolean(status?.fireAlarmActive || status?.recoveryRequired);
+  const canCall = online && !pending && !blocked && (state === "IDLE" || state === "COMPLETED");
+  const canSelect = online && !pending && !blocked && state === "READY_FOR_DESTINATION";
   const advance = advances[state];
 
   return (
@@ -94,6 +96,9 @@ export function ElevatorScenario() {
       </div>
 
       <p className="elevator-state" role="status">{status ? stateNames[state] ?? state : "Asansör verisi bekleniyor"}</p>
+      {blocked && <p className="scenario-interlock">{status?.fireAlarmActive
+        ? "Yangın alarmı simülasyonu aktif; asansör senaryosu komutları engelleniyor."
+        : "Alarm temizlendi; devam etmek için yangın alarmı panelinden iptal edilen simülasyonları sıfırla."} Son kat, kapı ve kabin doluluğu korunur.</p>}
       {status && status.pickupFloor != null && <p className="elevator-route">Çağrı: {floorName(status.pickupFloor)}<span>→</span>Hedef: {status.destinationFloor == null ? "Henüz seçilmedi" : floorName(status.destinationFloor)}</p>}
 
       <div className="elevator-controls">
@@ -113,12 +118,12 @@ export function ElevatorScenario() {
         </div>
         <div className="elevator-advance">
           <span>Simüle edilmiş sensör olayı</span>
-          <button className="elevator-button primary" disabled={!online || pending || !advance} onClick={() => advance && void command("/api/elevator/simulation/advance", advance.notice, { expectedState: state })}>{pending ? "Gönderiliyor…" : advance?.label ?? "Olay bekleniyor"}</button>
+          <button className="elevator-button primary" disabled={!online || pending || blocked || !advance} onClick={() => advance && void command("/api/elevator/simulation/advance", advance.notice, { expectedState: state })}>{pending ? "Gönderiliyor…" : advance?.label ?? "Olay bekleniyor"}</button>
           <p>Kat seçimi, açık kapı ve kabine giriş doğrulandıktan sonra açılır.</p>
         </div>
       </div>
 
-      <div className="elevator-feedback" role="status">{notice && <span className="success">{notice}</span>}</div>
+      <div className="elevator-feedback" role="status">{notice && !blocked && <span className="success">{notice}</span>}</div>
       {commandError && <p className="elevator-command-error" role="alert">{commandError}</p>}
       <p className="elevator-note">Bu case tamamen simülasyondur. Gerçek asansöre veya robota hareket komutu göndermez; varış, kapı ve kabin olaylarını sen ilerletirsin.</p>
     </section>

@@ -15,6 +15,8 @@ data class DoorStatusDto(
     val doorOpen: Boolean,
     val passageAllowed: Boolean,
     val robotInDoorway: Boolean,
+    val fireAlarmActive: Boolean,
+    val recoveryRequired: Boolean,
     val observedAtUnixMs: Long,
 )
 
@@ -25,6 +27,8 @@ fun DoorStatus.toDto() = DoorStatusDto(
     doorOpen = doorOpen,
     passageAllowed = passageAllowed,
     robotInDoorway = robotInDoorway,
+    fireAlarmActive = fireAlarmActive,
+    recoveryRequired = recoveryRequired,
     observedAtUnixMs = observedAtUnixMs,
 )
 

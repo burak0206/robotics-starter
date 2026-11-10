@@ -5,6 +5,8 @@ use std::{sync::Arc, time::SystemTime};
 use tokio::sync::Mutex;
 use tonic::{Request, Response, Status};
 
+use crate::fire_alarm::{alarm_active_error, AlarmGate};
+
 use crate::proto::{
     door_service_server::DoorService, AdvanceDoorSimulationRequest, DoorStatus,
     GetDoorStatusRequest, RequestDoorPassageRequest, StartDoorPassageRequest,
@@ -12,6 +14,7 @@ use crate::proto::{
 
 #[derive(Debug)]
 enum DoorError {
+    RecoveryRequired,
     Busy,
     DoorNotReady,
     InvalidExpectedState,
@@ -22,6 +25,9 @@ enum DoorError {
 impl From<DoorError> for Status {
     fn from(error: DoorError) -> Self {
         match error {
+            DoorError::RecoveryRequired => Self::failed_precondition(
+                "Kapı geçişi iptal edildi. Simülasyonu açıkça sıfırlamadan devam edilemez.",
+            ),
             DoorError::Busy => Self::failed_precondition("Kapıda devam eden bir geçiş var."),
             DoorError::DoorNotReady => Self::failed_precondition(
                 "Geçişe başlamadan önce kapının açılması doğrulanmalıdır.",
@@ -78,28 +84,38 @@ impl Phase {
 #[derive(Default)]
 struct Door {
     phase: Phase,
+    cancelled: bool,
 }
 
 impl Door {
-    fn snapshot(&self) -> DoorStatus {
+    fn snapshot(&self, fire_alarm_active: bool) -> DoorStatus {
         DoorStatus {
             door_id: "door-01".into(),
             mode: "simulation".into(),
-            state: self.phase.name().into(),
+            state: if self.cancelled {
+                "CANCELLED"
+            } else {
+                self.phase.name()
+            }
+            .into(),
             door_open: matches!(
                 self.phase,
                 Phase::ReadyToPass | Phase::Passing | Phase::Closing
             ),
-            passage_allowed: matches!(self.phase, Phase::ReadyToPass | Phase::Passing),
+            passage_allowed: !self.cancelled
+                && matches!(self.phase, Phase::ReadyToPass | Phase::Passing),
             robot_in_doorway: self.phase == Phase::Passing,
             observed_at_unix_ms: SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_millis() as i64,
+            fire_alarm_active,
+            recovery_required: self.cancelled,
         }
     }
 
     fn request_passage(&mut self) -> Result<(), DoorError> {
+        self.ensure_recovered()?;
         if !matches!(self.phase, Phase::Idle | Phase::Completed) {
             return Err(DoorError::Busy);
         }
@@ -108,6 +124,7 @@ impl Door {
     }
 
     fn start_passage(&mut self) -> Result<(), DoorError> {
+        self.ensure_recovered()?;
         if self.phase != Phase::ReadyToPass {
             return Err(DoorError::DoorNotReady);
         }
@@ -116,6 +133,7 @@ impl Door {
     }
 
     fn advance(&mut self, expected_state: &str) -> Result<(), DoorError> {
+        self.ensure_recovered()?;
         let expected = Phase::parse(expected_state).ok_or(DoorError::InvalidExpectedState)?;
         if self.phase != expected {
             return Err(DoorError::StaleExpectedState);
@@ -130,11 +148,47 @@ impl Door {
         };
         Ok(())
     }
+
+    fn ensure_recovered(&self) -> Result<(), DoorError> {
+        if self.cancelled {
+            return Err(DoorError::RecoveryRequired);
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Default)]
 pub struct DoorSimulator {
     door: Arc<Mutex<Door>>,
+    alarm: AlarmGate,
+}
+
+impl DoorSimulator {
+    pub fn new(alarm: AlarmGate) -> Self {
+        Self {
+            door: Arc::default(),
+            alarm,
+        }
+    }
+
+    // These helpers acquire only the domain mutex; the caller owns the alarm gate.
+    pub(super) async fn cancel_for_alarm(&self) {
+        let mut door = self.door.lock().await;
+        if !matches!(door.phase, Phase::Idle | Phase::Completed) {
+            door.cancelled = true;
+        }
+    }
+
+    pub(super) async fn is_cancelled_under_gate(&self) -> bool {
+        self.door.lock().await.cancelled
+    }
+
+    pub(super) async fn reset_cancelled_under_gate(&self) {
+        let mut door = self.door.lock().await;
+        if door.cancelled {
+            *door = Door::default();
+        }
+    }
 }
 
 #[tonic::async_trait]
@@ -143,34 +197,47 @@ impl DoorService for DoorSimulator {
         &self,
         _request: Request<GetDoorStatusRequest>,
     ) -> Result<Response<DoorStatus>, Status> {
-        Ok(Response::new(self.door.lock().await.snapshot()))
+        let alarm = self.alarm.read().await;
+        Ok(Response::new(self.door.lock().await.snapshot(*alarm)))
     }
 
     async fn request_passage(
         &self,
         _request: Request<RequestDoorPassageRequest>,
     ) -> Result<Response<DoorStatus>, Status> {
+        let alarm = self.alarm.read().await;
+        if *alarm {
+            return Err(alarm_active_error());
+        }
         let mut door = self.door.lock().await;
         door.request_passage()?;
-        Ok(Response::new(door.snapshot()))
+        Ok(Response::new(door.snapshot(*alarm)))
     }
 
     async fn start_passage(
         &self,
         _request: Request<StartDoorPassageRequest>,
     ) -> Result<Response<DoorStatus>, Status> {
+        let alarm = self.alarm.read().await;
+        if *alarm {
+            return Err(alarm_active_error());
+        }
         let mut door = self.door.lock().await;
         door.start_passage()?;
-        Ok(Response::new(door.snapshot()))
+        Ok(Response::new(door.snapshot(*alarm)))
     }
 
     async fn advance_simulation(
         &self,
         request: Request<AdvanceDoorSimulationRequest>,
     ) -> Result<Response<DoorStatus>, Status> {
+        let alarm = self.alarm.read().await;
+        if *alarm {
+            return Err(alarm_active_error());
+        }
         let mut door = self.door.lock().await;
         door.advance(&request.into_inner().expected_state)?;
-        Ok(Response::new(door.snapshot()))
+        Ok(Response::new(door.snapshot(*alarm)))
     }
 }
 
@@ -184,7 +251,7 @@ mod tests {
     }
 
     fn semantic_snapshot(door: &Door) -> DoorStatus {
-        let mut status = door.snapshot();
+        let mut status = door.snapshot(false);
         status.observed_at_unix_ms = 0;
         status
     }
@@ -192,7 +259,7 @@ mod tests {
     #[test]
     fn passage_requires_opening_then_clearing_before_closure_and_can_be_replayed() {
         let mut door = Door::default();
-        let initial = door.snapshot();
+        let initial = door.snapshot(false);
         assert_eq!(initial.door_id, "door-01");
         assert_eq!(initial.mode, "simulation");
         assert_eq!(initial.state, "IDLE");
@@ -203,34 +270,34 @@ mod tests {
 
         for _ in 0..2 {
             door.request_passage().unwrap();
-            let opening = door.snapshot();
+            let opening = door.snapshot(false);
             assert_eq!(opening.state, "OPENING");
             assert!(!opening.door_open);
             assert!(!opening.passage_allowed);
 
             door.advance("OPENING").unwrap();
-            let ready = door.snapshot();
+            let ready = door.snapshot(false);
             assert_eq!(ready.state, "READY_TO_PASS");
             assert!(ready.door_open);
             assert!(ready.passage_allowed);
             assert!(!ready.robot_in_doorway);
 
             door.start_passage().unwrap();
-            let passing = door.snapshot();
+            let passing = door.snapshot(false);
             assert_eq!(passing.state, "PASSING");
             assert!(passing.door_open);
             assert!(passing.passage_allowed);
             assert!(passing.robot_in_doorway);
 
             door.advance("PASSING").unwrap();
-            let closing = door.snapshot();
+            let closing = door.snapshot(false);
             assert_eq!(closing.state, "CLOSING");
             assert!(closing.door_open);
             assert!(!closing.passage_allowed);
             assert!(!closing.robot_in_doorway);
 
             door.advance("CLOSING").unwrap();
-            let completed = door.snapshot();
+            let completed = door.snapshot(false);
             assert_eq!(completed.state, "COMPLETED");
             assert!(!completed.door_open);
             assert!(!completed.passage_allowed);
@@ -271,8 +338,8 @@ mod tests {
             Code::FailedPrecondition
         );
         assert_eq!(semantic_snapshot(&door), before);
-        assert!(door.snapshot().door_open);
-        assert!(door.snapshot().robot_in_doorway);
+        assert!(door.snapshot(false).door_open);
+        assert!(door.snapshot(false).robot_in_doorway);
 
         door.advance("PASSING").unwrap();
         let before = semantic_snapshot(&door);

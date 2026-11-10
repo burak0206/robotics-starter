@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { request, type RobotStatus, type StopResponse } from "./api";
 import { ElevatorScenario } from "./ElevatorScenario";
 import { DoorScenario } from "./DoorScenario";
+import { FireAlarmScenario } from "./FireAlarmScenario";
 import "./style.css";
 
 type Connection = "connecting" | "online" | "offline";
@@ -385,6 +386,7 @@ function App() {
           </div>
         </div>
 
+        <FireAlarmScenario />
         <ElevatorScenario />
         <DoorScenario />
 

@@ -17,6 +17,8 @@ data class ElevatorStatusDto(
     val destinationFloor: Int?,
     val doorsOpen: Boolean,
     val robotInCabin: Boolean,
+    val fireAlarmActive: Boolean,
+    val recoveryRequired: Boolean,
     val observedAtUnixMs: Long,
 )
 
@@ -29,6 +31,8 @@ fun ElevatorStatus.toDto() = ElevatorStatusDto(
     destinationFloor = if (hasDestinationFloor()) destinationFloor else null,
     doorsOpen = doorsOpen,
     robotInCabin = robotInCabin,
+    fireAlarmActive = fireAlarmActive,
+    recoveryRequired = recoveryRequired,
     observedAtUnixMs = observedAtUnixMs,
 )
 

@@ -17,6 +17,12 @@ import dev.robotics.proto.DoorStatus
 import dev.robotics.proto.GetDoorStatusRequest
 import dev.robotics.proto.RequestDoorPassageRequest
 import dev.robotics.proto.StartDoorPassageRequest
+import dev.robotics.proto.ActivateFireAlarmRequest
+import dev.robotics.proto.ClearFireAlarmRequest
+import dev.robotics.proto.FireAlarmServiceGrpc
+import dev.robotics.proto.FireAlarmStatus
+import dev.robotics.proto.GetFireAlarmStatusRequest
+import dev.robotics.proto.ResetCancelledSimulationsRequest
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
 import io.grpc.StatusRuntimeException
@@ -36,6 +42,7 @@ class RobotGateway(
     private val stub = RobotServiceGrpc.newBlockingStub(channel)
     private val elevatorStub = ElevatorServiceGrpc.newBlockingStub(channel)
     private val doorStub = DoorServiceGrpc.newBlockingStub(channel)
+    private val fireAlarmStub = FireAlarmServiceGrpc.newBlockingStub(channel)
 
     fun status(): RobotStatus = stub.withDeadlineAfter(2, TimeUnit.SECONDS)
         .getStatus(GetStatusRequest.getDefaultInstance())
@@ -95,6 +102,32 @@ class RobotGateway(
         throw DoorRpcException(failure)
     }
 
+    fun fireAlarmStatus(): FireAlarmStatus = fireAlarmCall {
+        fireAlarmStub.withDeadlineAfter(2, TimeUnit.SECONDS)
+            .getStatus(GetFireAlarmStatusRequest.getDefaultInstance())
+    }
+
+    fun activateFireAlarm(): FireAlarmStatus = fireAlarmCall {
+        fireAlarmStub.withDeadlineAfter(2, TimeUnit.SECONDS)
+            .activate(ActivateFireAlarmRequest.getDefaultInstance())
+    }
+
+    fun clearFireAlarm(): FireAlarmStatus = fireAlarmCall {
+        fireAlarmStub.withDeadlineAfter(2, TimeUnit.SECONDS)
+            .clear(ClearFireAlarmRequest.getDefaultInstance())
+    }
+
+    fun resetCancelledSimulations(): FireAlarmStatus = fireAlarmCall {
+        fireAlarmStub.withDeadlineAfter(2, TimeUnit.SECONDS)
+            .resetCancelledSimulations(ResetCancelledSimulationsRequest.getDefaultInstance())
+    }
+
+    private fun fireAlarmCall(operation: () -> FireAlarmStatus): FireAlarmStatus = try {
+        operation()
+    } catch (failure: StatusRuntimeException) {
+        throw FireAlarmRpcException(failure)
+    }
+
     @PreDestroy
     override fun close() {
         channel.shutdownNow()
@@ -103,3 +136,4 @@ class RobotGateway(
 
 class ElevatorRpcException(val failure: StatusRuntimeException) : RuntimeException(failure)
 class DoorRpcException(val failure: StatusRuntimeException) : RuntimeException(failure)
+class FireAlarmRpcException(val failure: StatusRuntimeException) : RuntimeException(failure)

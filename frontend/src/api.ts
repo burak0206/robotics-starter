@@ -23,6 +23,8 @@ export interface ElevatorStatus {
   destinationFloor: number | null;
   doorsOpen: boolean;
   robotInCabin: boolean;
+  fireAlarmActive: boolean;
+  recoveryRequired: boolean;
   observedAtUnixMs: number;
 }
 
@@ -33,6 +35,18 @@ export interface DoorStatus {
   doorOpen: boolean;
   passageAllowed: boolean;
   robotInDoorway: boolean;
+  fireAlarmActive: boolean;
+  recoveryRequired: boolean;
+  observedAtUnixMs: number;
+}
+
+export interface FireAlarmStatus {
+  alarmId: string;
+  mode: "simulation";
+  active: boolean;
+  recoveryRequired: boolean;
+  doorCancelled: boolean;
+  elevatorCancelled: boolean;
   observedAtUnixMs: number;
 }
 

@@ -1,10 +1,17 @@
 # Robot–bina entegrasyonu
 
-Bu dosya **mevcut simülasyonların** davranış ve API sözleşmesidir. Ürün vizyonu, hedef mimari, güvenlik/komut yetkisi, sürüm sınırları ve sonraki MVP kabul kriterleri [Ürün kapsamı ve teknik yön](product-scope.md) belgesindedir. Buradaki durum akışları henüz authenticated robot görev yürütmesi veya saha doğrulaması değildir.
+Bu dosya **bugün uygulanan simülasyonları** ve **henüz uygulanmamış, planlanan case'leri** ayrı bölümlerde tanımlar. Ürün vizyonu, hedef mimari, güvenlik/komut yetkisi ve sürüm sınırlarının tek referansı [Ürün kapsamı ve teknik yön](product-scope.md) belgesidir. Buradaki mevcut durum akışları kimliği doğrulanmış robot görev yürütmesi veya saha doğrulaması değildir.
 
 Amaç; robotların elektronik kapı, asansör, geçiş ışığı ve yangın alarmı gibi bina sistemleriyle ortak senaryolar üzerinden çalışmasını sağlamak. Ürün çekirdeği komutları, cihaz geri bildirimlerini ve robotun görev adımlarını birbirine bağlar.
 
-Web arayüzü operatörün senaryoyu izlemesini ve simülasyonu denemesini sağlar. Kotlin backend REST sınırını ve istek doğrulamasını, Rust servisi gRPC üzerinden robot/cihaz bağlantısı sınırını sağlar. İlk sürümde süreç durumu bellekte tutulur.
+Mevcut web arayüzü operatörün senaryoyu izlemesini ve simülasyonu denemesini sağlar. Kotlin backend REST sınırını ve istek doğrulamasını, Rust servisi gRPC üzerinden robot/cihaz bağlantısı sınırını sağlar. Mevcut sürümde süreç durumu bellekte tutulur.
+
+| Bölüm | Destek durumu | Ne ifade eder? |
+| --- | --- | --- |
+| Aşağıdaki asansör, kapı ve sabit alarm iptal akışları | `SIMULATED` | Kodda çalışan, elle ilerletilen üç case; bu bölümlerdeki REST uçları mevcuttur |
+| Planlanan tesis alarmı, erişim geçişi, yürüyen yol/merdiven, konveyör ve devreye alma case'leri | `PLANNED` | Hedef davranış ve kabul koşulları; adaptör, yeni API veya saha desteği henüz yoktur |
+
+Hiçbir case bu belgeyle `FIELD_VERIFIED` sayılmaz. Mevcut üç simülasyonun aşağıdaki durum/API sözleşmeleri korunur; yeni case'ler en sondaki plan bölümündedir.
 
 ## İlk case: asansör çağırma ve kat seçimi
 
@@ -111,10 +118,70 @@ Ortak proto içindeki `FireAlarmService` kullanılır. Alarm durumu `active`, `r
 - Alarm ve iptaller bellektedir; servis yeniden başlayınca simülasyon başlangıç durumuna döner. Gerçek panelden durum doğrulaması, kalıcı kayıt ve birden fazla servis örneği arasında koordinasyon henüz yoktur.
 - Harici alarm kaynağı, olay kimliği/sıralaması, yetkili alarm onayı ve fiziksel kurtarma geri bildirimleri gerçek adaptör aşamasına aittir.
 
-## Sonraki case'ler
+## Planlanan case'ler — `PLANNED`
 
-| Case | İlk uygulanacak davranış | Gerekli geri bildirim |
+Bu bölümdeki İngilizce case ve olay adları **dokümantasyon kimlikleridir**; yeni REST/gRPC uçları veya uygulanmış adaptörler tanımlamaz. Mimari sınırlar [tesis olay hattı](product-scope.md#facility-event-pipeline), [cihaz profilleri](product-scope.md#device-profiles) ve [saha paketleri](product-scope.md#field-packages) bölümlerinde tutulur; burada her case'in akışı ve kabul koşulları yer alır.
+
+| Case kimliği | Amaç | Temel sınır |
 | --- | --- | --- |
-| Geçiş ışığı | Ortak bir geçiş noktasında robot için izin/bekle akışı | Geçişin doluluğu ve kontrolcü izin durumu |
+| `FacilityAlarmResponse` | Bağımsız tesis alarmı kaynağını dinle; bölge/prosedüre göre robot görevlerine yansıt | Mevcut sabit demo iptal politikası tesis prosedürü sayılmaz |
+| `AccessPassage` | Otomatik kapı, bariyer veya turnikeden izinli geçiş | Çıkış sürme ve fiziksel geçiş kanıtı ayrı yeteneklerdir |
+| `MovingWalkwayEscalator` | Ekipman durumunu izle, desteklenmeyen geçişi rotadan çıkar | Başlangıç kapsamı izleme ve rota dışlama; robotun binmesi varsayılan olarak `UNSUPPORTED` |
+| `ConveyorTransfer` | Robot–endüstriyel konveyör yük aktarımını eşgüdümle | El sıkışması ve sensör kanıtı gerekir; üretici register'ı varsayılmaz |
+| `SiteCommissioning` | Kurulum profilini kur, test et ve onaylı sürüm olarak yayımla | Cihaz/robot yetenekleri kanıtlanır; serbest güvenlik kuralı editörü değildir |
 
-“Traffic light” entegrasyonunda hangi fiziksel kontrolcü veya saha senaryosunun hedeflendiği ayrıca netleştirilecek. Yangın senaryosunda bina cihazlarının yangın işletimi kendi kontrolcülerinde kalır; bu uygulama robot iş akışının bina olaylarına tepkisini yönetir.
+### `FacilityAlarmResponse`: bağımsız kaynak, tesis politikası, robot tepkisi
+
+Planlanan akış: **bağımsız `FacilityAlarm` dinleyicisi → normalize edilmiş `FireAlarmActivated` olayı → zone/site eşlemesi ve onaylı `SiteEmergencyPolicy` → etkilenen robot başına izinli tepki → kabul ve ayrı sonuç doğrulaması**. `SourceListener` robot görevlerinden bağımsız, salt okunur çalışır; kaynak profiline göre abonelik/bildirim veya polling kullanır. Paneli resetleme veya çıkış sürme yetkisi bu dinleyiciden türetilmez. Kaynak olay kimliği/sırası, zaman/kalite ve bölge eşlemesi kaydedilir; olmayan bir cihaz sıra veya correlation alanı uydurulmaz.
+
+Robot başına tepki `EVENT_ONLY`, doğrulanmış `Wait` veya `CancelTask` olabilir. Seçim tesis prosedürü, etkilenen bölge, görev ve robot capability profiline bağlıdır; bütün robotlara aynı eylem gönderilmez. `EVENT_ONLY`, ayrı bildirim yeteneği olan `RobotEventPort` üzerinden; eylemler `RobotCommandPort` üzerinden ele alınır. Bildirim alındısı yalnızca teslim kanıtıdır. Olayı alan robot/entegratör bir hareket başlatacaksa aynı kontrol otoritesi profilini uygulamak zorundadır; bildirim kanalı ikinci bir komut yolu oluşturmaz.
+
+Desteklenmeyen eylem fiziksel dispatch yapılmadan reddedilir ve operatöre bildirilir; `CancelTask` yerine sıfır hız yayınlamak eşdeğer sayılmaz. Komut ACK'i, isteğin kabul edildiğini gösterir; robotun beklediği veya görevin terminal olarak iptal edildiği ayrı geri bildirimle doğrulanır. Tekrarlanan aktif polling örnekleri yeni eylem üretmez: aynı politika/canonical olay veya aktivasyon/hedef/eylem etkisi mevcut `commandId` ile eşleştirilir. Örnek etki anahtarı `pinnedPolicyVersion + logicalActivationId + target + action → commandId` olur; transport delivery kimliği bunun yerine kullanılmaz.
+
+Sıfır robot varken listener çalışmaya devam eder. Aktif alarm sırasında bağlanan robot veya yeni görev, yeni bir activation event beklemeden güncel `FacilityContextSnapshot` üzerinden policy/capability değerlendirmesine girer. Yeni context teslimi, geçmiş fiziksel komutların otomatik yeniden oynatılması değildir.
+
+Başlangıçta taze kaynak snapshot'ı gelene kadar durum `UNKNOWN` olur. Kaynak `DISCONNECTED`, `FAULT` veya `UNKNOWN` olduğunda alarm temizlenmiş sayılmaz; `SourceConnectionLost` ve `DeviceFaultReported`, `FireAlarmCleared` olayı değildir. Yeni normal geçişlerin kabulü ve devam eden işlerin davranışı onaylı tesis prosedürüne göre ele alınır; bağlantı geri geldi diye `Resume` gönderilmez. Alarm temizleme olayı da kendiliğinden devam izni değildir. Eski bir alarm çevrimine veya boot/oturuma ait gecikmiş temizleme, daha yeni aktif alarmı kaldıramaz; kaynak bunu ayırt etmeye yeterli kanıt sağlamıyorsa durum belirsiz kalır ve yeniden doğrulanır.
+
+### `AccessPassage`: kapı, bariyer ve turnike
+
+Planlanan akış: **kimlik/erişim kararı → kaynak rezervasyonu → belgelenmiş açma/geçiş talebi → bağımsız açık/geçişe hazır geri bildirimi → robot geçişi → bütün footprint'in çıkış kanıtı → kaynak bırakma**. Okunabilen girişler ve sürülebilen çıkışlar profilde ayrı eşlenir. Röle ACK'i veya çıkış readback'i kapının açıldığını, bariyerin kalktığını ya da turnikenin robot geçişine uygun olduğunu kanıtlamaz; gerekli feedback yoksa otomatik geçiş verilmez.
+
+Geçiş açıklığı, robotun yük dahil footprint'i ve ekipmanın algılama sınırları eşleştirilir. İnsan algılayan bir sensörün robotu ve yükünü de algıladığı varsayılmaz. Engel, stale sensör veya kayıp çıkış teyidinde doluluk belirsiz tutulur; timeout veya iptal kaynağı boşaltmaz. Mevcut kapı case'i bu saha doğrulamalarını içermeyen `SIMULATED` akış olarak kalır.
+
+### `MovingWalkwayEscalator`: önce izleme ve rota dışlama
+
+Başlangıç akışı: **belgelenmiş ekipman durumunu oku → veri kalitesini değerlendir → robot/model için rota uygunluğunu belirle → destek yoksa geçişi rotadan çıkar**. İlk kapsam ekipmana başlat/durdur/yön komutu veya robota binme komutu içermez. `STOPPED` gözlemi bile tek başına geçilebilir alan kanıtı değildir.
+
+Binme ancak ekipman, robot/yük ve tesis prosedürü için doğrulanmış ortak capability ve test kanıtı varsa ileride ayrı bir kapsam olabilir. Varsayılan `UNSUPPORTED` sonucudur; hareket eden sisteme uygunluk uydurulmaz. Kaynak kaybında rota dışlama kendiliğinden kalkmaz.
+
+### `ConveyorTransfer`: endüstriyel yük aktarımı
+
+Örnek sözleşme akışı: **`READY → TRANSFER_REQUESTED → TRANSFER_IN_PROGRESS → TRANSFER_COMPLETED`**. `BUSY`, yeni aktarımın kabul edilmediğini gösterir. Bu adlar mantıksal el sıkışma örneğidir; herhangi bir PLC'nin bit/register adresleri veya üretici protokolü değildir. Gerçek read/write yönleri, hazır/işgal anlamı ve timeout değerleri seçilen kontrolcü profilinde belgelenir.
+
+Robot hizası, yük varlığı ve aktarım bölgesinin durumu gerekli sensör/robot kanıtlarıyla doğrulanır. Komut ACK'i aktarımın başladığı veya yükün teslim edildiği anlamına gelmez. Dispatch sonrası yanıtsızlıkta sonuç `OUTCOME_UNKNOWN` kalabilir; kör retry yapılmaz. Aktarım tamamlanması da tek başına robotun/alanın boşaldığını göstermez: doluluk ve kaynak tutma, ayrıca clearance kanıtı gelene kadar korunur.
+
+### `SiteCommissioning`: müşteri devreye alma paneli
+
+Planlanan akış: **cihaz profili seç → gateway/ağ bağlantısını kur → giriş okuma/çıkış sürme eşlemelerini ayır → mantıksal kaynak ve zone/site bağla → onaylı politika ve robot capability profillerini ata → salt okunur testler → yetkili kontrollü komut testleri → onay → sürümlü yayımlama ve audit**. Profil üretici/model/firmware, ağ ve I/O sınırlarını taşır; bilinmeyen değerler kurulum tamamlanmış gibi doldurulmaz.
+
+Panel, beyan edilen capability ile testte gözlenen capability'yi ve kanıtın kapsamını ayrı gösterir. Test sonucu, zaman/kalite, kullanılan model/firmware ve profil sürümü kayıtlı olur; başarısız veya doğrulanamayan test `FIELD_VERIFIED` üretmez. Komut testleri yetkili devreye alma koşullarında çalışır. Yayımlama yalnızca onaylı sürümü etkinleştirir; daha sonraki değişiklik yeni sürüm/test/onay gerektirir. Kullanıcıya keyfi safety interlock veya tesis yangın kuralı yazdırılmaz; panel yalnızca onaylı profil/politika seçeneklerini bağlar.
+
+### Planlanan kabul kontrolleri
+
+Bu kontroller gelecek implementasyon ve saha profili içindir; mevcut testlerin geçtiği iddiası değildir.
+
+| Kontrol | Beklenen kanıt/sonuç |
+| --- | --- |
+| Alarm kaynağı aboneliği veya polling | Kaynak profilinin yönteminde aynı olay/bölge normalize edilir; robot başına politika kararı kaydedilir. Reconnect sonrası yeni delivery kimliğiyle gelen aynı logical activation dahil, aynı etki için ikinci komut dispatch'i sıfırdır |
+| Robot/görevden bağımsız dinleme | Sıfır robot varken listener izler; aktif alarm sırasında bağlanan robot current-state snapshot üzerinden değerlendirilir, yeni activation event beklenmez |
+| Başlangıç/kaynak kaybı/yanıtsızlık | Taze snapshot öncesi `UNKNOWN`; bağlantı kaybı `DISCONNECTED`, eski/yanıtsız gözlem `STALE`/`UNKNOWN` olur. `FAULT` yalnız belgelenmiş cihaz arıza bildirimiyle gösterilir. Bunlar alarmı temizlemez, otomatik `Resume` yoktur; kaynak geri gelince taze durum uzlaştırılır |
+| Eski clear, yeni active | Eski boot/oturum veya alarm çevriminden sonra ulaşan temizleme yeni aktif çevrimi düşürmez; sıra/çevrim kanıtı yoksa belirsizlik açık kalır |
+| ACK var, eylem kanıtı yok | Bildirim alındısı hareket kanıtı değildir. `Wait`/`CancelTask`, kapı açma veya konveyör ACK'i de fiziksel başarıya dönüşmez; ayrı sonuç beklenir, deadline'da bilinmeyen sonuç ve operatör ihtiyacı gösterilir |
+| Desteklenmeyen robot/ekipman eylemi | Komut adaptörü çağrısı ve fiziksel dispatch sayısı **sıfır**; açık `UNSUPPORTED`, kayıtlı ret ve gerekiyorsa rota dışlama vardır |
+| I/O hatası ve kablo kopması | Seçilen giriş devresinin gözetim/algılama yeteneği test edilir; tel kopması normal/kapalı/clear sayılmaz. Gözetimsiz giriş kopmayı ayırt edemiyorsa bu sınır profilde gösterilir, capability doğrulanmış sayılmaz ve normal durum kanıtı üretilmez |
+| Açıklık/footprint/algılama sınırı | Kapı, bariyer veya turnike için robot/yük uyumu ve çıkış kanıtı test edilir; röle ACK'iyle geçiş açılmaz, sensör/çıkış kaybında doluluk tutulur |
+| Yürüyen yol/merdiven | Başlangıçta yalnızca izleme/rota dışlama; doğrulanmış ortak capability yoksa binme komutu yoktur; stale/kayıp kaynak geçişi uygun hale getirmez |
+| Konveyör el sıkışması ve timeout | `BUSY` yeni aktarımı engeller; sensör kanıtı olmadan tamamlandı olmaz; ACK kaybı, timeout veya eksik clearance doluluğu ve kaynak tutmayı kaldırmaz |
+| Devreye alma/yayımlama | Salt okunur ve kontrollü test kanıtları doğru profile bağlıdır; yetkisiz/onaysız sürüm etkinleşmez, yayımlayan aktör/sürüm/onay/test sonucu audit'te bulunur; yayımlama anlık fiziksel hareket başlatmaz |
+
+Fiziksel geçiş ışığı ve robot trafik koordinasyonundaki “Traffic Light” ayrı konulardır. Hangi kontrolcü ve saha senaryosunun hedeflendiği ayrıca netleştirilecek; bu plan bunlar için protokol veya cihaz desteği ilan etmez.

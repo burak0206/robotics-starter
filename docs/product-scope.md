@@ -2,10 +2,12 @@
 
 İnceleme tarihi: **2026-11-10**. Kod tabanı: `a976d449a29b670a9eef8d62cd020ec92cc58e11`.
 
+Kapsam güncellemesi: **2026-11-11**. Tesis olay listener'ları, ayrı bildirim/komut yolları, genişletilmiş ekipman türleri ve profil tabanlı devreye alma aşağıda `PLANNED` olarak tanımlanmıştır; uygulama desteği eklenmemiştir. Önceki protokol sürüm araştırmasının tarihi yukarıdaki inceleme tarihidir; yeni donanım adaylarının kaynak tarihleri kendi satırlarında belirtilir.
+
 Bu belge ürün kapsamı, hedef mimari, entegrasyon sınırları ve kabul kriterlerinin tek referansıdır. **Uygulanan özellik listesi değildir.** Bu görevde uygulama kodu, framework, protokol sözleşmesi veya bağımlılık değiştirilmemiştir. Repo ve üst dizinlerde `AGENTS.md` bulunmamıştır.
 
 - [README](../README.md): mevcut projeyi çalıştırma ve doğrulama.
-- [Mevcut kullanım senaryoları](use-cases.md): bugün çalışan simülasyonların durumları ve REST uçları. Bu belge onları tekrar tarif etmez.
+- [Kullanım senaryoları](use-cases.md): bugün çalışan simülasyonların durumları/REST uçları ve onlardan ayrı etiketlenen planlı saha senaryoları. Bu belge ayrıntılı case adımlarını tekrar tarif etmez.
 - Aşağıdaki **öneriler** kabul edilmiş saha tasarımı veya cihaz uyumluluk taahhüdü sayılmaz. Donanım modeli, firmware ve tesis prosedürü bilinmeyen yerler açık bırakılmıştır.
 
 ## 1. Ürün ve ilk pazar kapsamı
@@ -13,6 +15,8 @@ Bu belge ürün kapsamı, hedef mimari, entegrasyon sınırları ve kabul kriter
 Ürün, farklı robot ve bina/saha ekipmanlarını **kimlik, erişim, kaynak koordinasyonu ve görev akışı** üzerinden birleştiren yazılım ve gerektiğinde saha donanımıdır. Müşteri adayları robot üreticileri, robotik entegratörleri ve robot kullanan tesislerdir. İlk müşterinin hangisi olduğu henüz belirlenmemiştir; MVP için tek tesisli bir entegratör pilotu **çalışma varsayımıdır**.
 
 Platform; izinli kapı/kat/bölge kullanımı, geçiş sırası, rezervasyon, bekleme noktaları, desteklenen hareket hedefleri, hata yönetimi ve operatör devrini yönetir. Robotun lokal navigasyonu, motor kontrolü ve çarpışma önlemesi robotta kalır. Platformun tesis koordinasyonu bu yerel işlevlerin yerine geçmez.
+
+Platform ayrıca tesis olaylarını **robotlardan bağımsız kaynaklardan** toplar: robotun yangın alarmını duyması veya doğrudan her bina protokolünü bilmesi beklenmez. Ürün sınırı; tesis bağlantısı, olay yönetimi, robot koordinasyonu ve gerektiğinde donanım/kurulumun birlikte sağlanmasıdır. Kapı/bariyer/turnike geçişleri, yolcu taşıma ekipmanının durum ve rota kısıtları, endüstriyel konveyörle malzeme aktarımı farklı capability ve görev sözleşmeleri gerektirir.
 
 İlk ürün, sınırlı ve modellenmiş geçiş kaynaklarını koordine eder. Genel amaçlı sürekli uzay trafik planlayıcısı, her üreticiye hazır sürücü, bütün PLC'leri programlayan araç veya bina can güvenliği kontrolcüsü ilk MVP'nin kapsamı değildir. Yeni donanım geliştirmek her entegrasyonun önkoşulu değildir; belgelenmiş mevcut bir arayüz yeterliyse önce o kullanılır.
 
@@ -43,9 +47,11 @@ Mevcut yığın korunur: Spring Boot **3.5.7**, Kotlin **2.2.21**, JDK **21**, g
 | Komut sahipliği | Robot stop mutex'i ve bina alarm gate'i süreç içi sıralama sağlar | `ControlAuthority`, planner owner, fencing ve manuel devir yok; başka ROS publisher'ı engellenmez |
 | Mesaj güvenilirliği | `expectedState` aynı adımın hemen yinelenmesini reddeder; istemci deadline'ları var | Kalıcı `CommandId`, görev/olay kimliği, deduplication, sıra/boot bilgisi, outbox ve reconciliation yok |
 | Telemetri | ROS'ta bilinmeyen pil/hız `null`; sanal kapı/kabin bilgisi phase'ten türetilir | Yanıt zamanı `observedAtUnixMs` yeni üretilir; gerçek sensör zamanı/freshness kanıtı değildir. Source time, quality ve stale/unknown modeli yok |
+| Tesis listener'ları | Alarm yalnızca simülasyon REST işlemiyle tetiklenir; kaynak aboneliği/polling veya panel/BMS listener'ı yok | Bağımsız olay toplama, normalization, source health, zone/robot hedefleme ve kalıcı event/effect deduplication yok |
+| Devreye alma | Web mevcut demoları işletir; device-profile onboarding wizard'ı yok | Model/firmware/profil, sinyal eşleme, kontrollü saha testleri ve onaylı configuration publishing yok |
 | Kalıcılık | Domain ve alarm durumu bellekte; restart başlangıca döndürür | Görev/rezervasyon kurtarma, alarmı kaynaktan yeniden doğrulama ve kalıcı audit yok |
 | Haritalar | Asansör için `0..5` tamsayı katlar | Tesis/kat kimliği, harita sürümü, frame, birim ve kalibrasyon/dönüşüm eşlemesi yok |
-| Diğer entegrasyonlar | VDA 5050, Open-RMF, MassRobotics, MQTT, Modbus, OPC UA, BACnet, Eaton ve AWS/Greengrass adaptörleri yok | Bunlar aşağıda `PLANNED`; iç REST/gRPC kullanımı dış cihaz protokol desteği değildir |
+| Diğer entegrasyonlar | VDA 5050, Open-RMF, MassRobotics, harici MQTT/Modbus/OPC UA/BACnet, üretici saha adaptörleri ve AWS/Greengrass yok | Bunlar aşağıda `PLANNED`; marka/model örnekleri destek taahhüdü değildir. Bariyer/turnike/konveyör/yolcu bandı/yürüyen merdiven simülatörü de yok |
 
 Loopback'e bağlanmak authentication değildir. Mevcut anonim yazma uçlarının gerçek adaptöre eriştiği bir dağıtım, hedef MVP'nin güvenlik sınırını karşılamaz.
 
@@ -72,6 +78,11 @@ flowchart TD
     Host --> Sim[Simulators]
     Host --> Robot[Direct robot / vendor fleet manager]
     Host --> Building[Official API / documented controller / field gateway]
+    Sources[Panel / BMS / controller / field inputs] --> Listeners[SourceListener / FacilityEventSourcePort]
+    Listeners --> Normalize[EventNormalizer / ObservationStore]
+    Normalize --> Router[EventRouter / AffectedTaskResolver]
+    Router --> Edge
+    Arbiter --> Notify[RobotEventPort / capability-bound notification]
     Edge --> Journal[Local journal / AuditOutbox]
     Journal -->|Reconciled synchronization| Cloud
 ```
@@ -85,6 +96,8 @@ flowchart TD
 | `coordination` | Resource ownership, kuyruk/öncelik, bekleme noktası, clearance | Süre dolmasını fiziksel boşluk kabul etmek |
 | `commands` | Tek dispatcher, capability ve authority gate, komut ömrü/sonucu | İzin denetimini atlayan alternatif bir yazma yolu |
 | `observations` / `maps` | Kaynak zamanı, sıra/kalite, frame/kat dönüşümleri | Yanıt zamanını yeni sensör ölçümü saymak |
+| `facility-events` | Listener lifecycle, ortak event, source health, zone/task/robot hedefleme | Ham olayın doğrudan kontrol çıkışı üretmesi veya bağlantı kaybını alarm clear saymak |
+| `commissioning` | Versioned device/signal binding, test kanıtı, onaylı config yayınlama | Serbest dashboard kuralıyla safety policy veya adapter allowlist'i aşmak |
 | `emergency` | Sürümü onaylı `SiteEmergencyPolicy` ve olayların görev etkisi | Bina safety interlock'unu geçersiz kılmak |
 | `audit` / `persistence` | Append-only karar/komut/olay kaydı, deduplication, checkpoint/outbox | Cloud yok diye hareket komutunu kayıtsız tekrar etmek |
 | `adapters` | REST/gRPC sınırları, robot/cihaz/firmware/Greengrass çevirisi | İş politikasını vendor callback'lerine gömmek |
@@ -108,6 +121,10 @@ Aşağıdaki isimler hedef tasarımın İngilizce kavramlarıdır; mevcut proto 
 | `ControlAuthority` | Robot/resource veya trafik alanı kapsamı, owner, `authorityEpoch`, geçerlilik, handoff durumu |
 | `CommandEnvelope` | `commandId`, `taskId`, `stepId`, tenant/site/actor/robot/resource, payload hash, policy version, authority epoch, `issuedAt`, `expiresAt` |
 | `ObservationEnvelope` | Kaynak/gateway kimliği, resource, `eventId`, boot/session, sequence, `sourceObservedAt`, `receivedAt`, quality, correlation bilgisi |
+| `FacilityEventSourcePort` | Modele göre subscription/notification/polling ve health/snapshot; kontrol komutu üretmeyen inbound sınır |
+| `FacilityEvent` | Canonical event türü ve `canonicalEventId`/gerekiyorsa `logicalActivationId`; tenant/site/zone/source, gözlem zamanı/kalitesi ve source/profile/config sürümü |
+| `RobotEventPort` | Robotun desteklediği olay bildirimi ve delivery/receipt durumu; hareket komutu veya aksiyon sonucu değildir |
+| `EffectIntent` | Policy kararıyla seçilen hedef ve `NOTIFY_EVENT`, `REQUEST_ROBOT_ACTION`, `REQUEST_RESOURCE_ACTION` veya `OPERATOR_ESCALATION` |
 | `RobotCommandPort` | `NavigateTo`, `Wait`, `Resume`, `CancelTask`, durum/goal feedback; yalnızca capability ile izin verilen işlemler |
 | `BuildingResourcePort` | Kapı/asansör/erişim/ışık için profilde tanımlı command ve bağımsız observation kanalı |
 | `AuditPort` / `Clock` / `JournalPort` | Test edilebilir kalıcılık ve zaman sınırları; business kuralını altyapıdan ayırır |
@@ -129,6 +146,74 @@ Yan durumlar: `REJECTED`, `FAILED`, `EXPIRED_BEFORE_DISPATCH`, `CANCEL_REQUESTED
 Workflow `CANCELLED`, robotun durduğu veya kaynağın boşaldığı anlamına gelmez. `GoalReached` de tek başına robotun bütün footprint'inin kapı/kabin dışına çıktığının kanıtı değildir. `ClearanceEvidencePolicy`, doğrulanmış robot konumu/footprint'i, cihaz sensörü veya yetkili operatör doğrulamasından hangi kanıtların gerektiğini saha profiline göre tanımlar. Bu kanıt yoksa kaynak boş ilan edilmez.
 
 Cihaz command correlation taşımıyorsa var olmayan bir `commandId` echo'su uydurulmaz. Adaptörün onaylı taze durum okuma bariyeri veya manuel doğrulama profili kullanılır; belirsiz sonuç otomatik başarıya çevrilmez.
+
+<a id="facility-event-pipeline"></a>
+
+### Tesis listener'ları ve olaydan komuta akış — `PLANNED`
+
+Önerilen akış: **kaynak → listener → normalize edilmiş olay → site politikası/hedefleme → bildirim veya komut → ayrı sonuç doğrulaması → audit**. Bu isimler yeni servis, thread-per-device, broker ya da mevcut REST endpoint'i taahhüdü değildir; edge içinde modüler sorumluluklardır.
+
+1. **Kaynak ve listener:** Alarm paneli, BMS, belgelenmiş kontrolcü veya güvenilir field gateway `FacilityEventSourcePort` üzerinden okunur. `SourceListener`, profilin desteklediği event subscription, callback/notification veya zamanlanmış polling'i işletir. Her cihazın push event veya heartbeat sunduğu varsayılmaz; callback kimliği, subscriber yetkisi ve polling/query rate sınırları profil bazlıdır. Listener'a kontrol yetkisi verilmesi gerekmez.
+2. **Normalization:** `EventNormalizer`, kaynak kodlarını `FireAlarmActivated`, `FireAlarmCleared`, `DoorOpened`, `PassageCompleted` veya `DeviceFaultReported` gibi canonical anlamlara çevirir. Bunlar önerilen domain isimleridir; üretici event/register adları değildir. Tenant/site/source ve zone eşlemesi yayımlanmış binding'den gelir; payload başka siteyi yetkilendiremez.
+3. **Politika ve hedefleme:** `AffectedTaskResolver`, etkilenen zone, robot, görev ve kaynakları inventory/map/policy binding'lerinden seçer. `SiteEmergencyPolicy`, olayın hangi etkiyi gerektirdiğini belirler. Ham kontak veya ağ mesajı doğrudan `CancelTask`, röle çıkışı veya genel broadcast üretmez.
+4. **Yürütme:** Yalnız event kabul eden robotta `RobotEventPort` kullanılır. Görev askıya alma/iptal API'si olan robotta ilgili capability destekleniyorsa `EffectIntent` aynı authorization/authority/expiry gate'inden `RobotCommandPort` üzerinden yürütülür. Cihaz çıkışı gerekiyorsa `BuildingResourcePort` ve atanmış resource writer kullanılır. Destek yoksa `UNSUPPORTED` veya operatör devri kaydedilir; alternatif bir işlemin aynı etkiyi yaptığı varsayılmaz.
+5. **Doğrulama:** Network delivery, robot receipt/command ACK ve robotun doğrulanmış task/mode/pose sonucu ayrı izlenir. Event-only robotun receipt'i görev askıya alındı anlamına gelmez. Yanıt veya sonuç gelmezse `ACTION_UNCONFIRMED`/`OUTCOME_UNKNOWN` ile escalation yapılır; başarılı görünmez.
+
+Olay alımı robot üzerinde otonom hareket/eylem tetikleyebiliyorsa bu davranış `CapabilityProfile` ve command ownership sözleşmesinde belgelenir. `NOTIFY_EVENT`, komut yetkisini dolaylı biçimde aşmanın yolu değildir. Yazma yan etkisi taşıyan bildirimler de son authorization/authority gate'ine tabidir; salt telemetry paylaşımıyla aynı profile konulmaz.
+
+| Ayrı izlenen boyut | Önerilen örnek değerler | Kural |
+| --- | --- | --- |
+| Alarm sinyalinin bilgisi | `ACTIVE`, `INACTIVE`, `UNKNOWN` ve last-confirmed value | Haber yokluğu veya source restart, `INACTIVE`/`FireAlarmCleared` değildir |
+| Kaynak bağlantısı | `CONNECTED`, `DISCONNECTED`, `DEGRADED` | Broker/gateway bağlı olması panelin veya fiziksel girişin sağlıklı olduğunu tek başına kanıtlamaz |
+| Cihazın bildirdiği arıza | Modelin belgelenmiş fault durumu | Ağ timeout'u ile cihazın açıkça bildirdiği fault aynı olay değildir |
+| Gözlemin kalitesi | `GOOD`, `STALE`, `UNKNOWN` | Yeni `receivedAt`, eski veya cached sensör verisini taze yapmaz |
+| Etkinin sonucu | Delivery / receipt / confirmed state / unconfirmed | Paket veya olay teslimi, fiziksel aksiyon tamamlandı kanıtı değildir |
+
+Listener başlangıcında veya reconnect'te profilin taze snapshot/reconciliation adımı tamamlanana kadar bilgi `UNKNOWN` olabilir. Son doğrulanmış alarm aktifken veri eskirse last-confirmed alarm korunur ve kalite bilinmiyor/eski gösterilir; clear üretilmez. Kablo kopmasıyla normal kontak seviyesini ayıramayan giriş güvenilir alarm-clear kaynağı sayılmaz. Supervisory wiring, ayrı fault girişi veya başka doğrulama gereksinimi saha dokümanıyla seçilir; NO/NC/polarite/enerji kesilme davranışı tahmin edilmez.
+
+Listener lifecycle'ı robot veya görev sayısına bağlı değildir; sıfır robot kayıtlıyken de site olayları izlenir. Alarm aktifken sonradan bağlanan robot veya başlayan görev, yeni bir aktivasyon kenarı beklemeden güncel ve geçerli `FacilityContextSnapshot` üzerinden değerlendirilir. Context eski/bilinmiyorsa normal admission site prosedürüne göre reddedilir veya operatöre devredilir. Olay aktarım ACK'i ile panelin alarm acknowledge/reset kontrolü aynı yetenek sayılmaz.
+
+Tekrarlanan active polling sonuçları her seferinde yeni alarm aktivasyonu ve fiziksel komut üretmez. Transport `sourceDeliveryId`/offset ile canonical olay/aktivasyon kimliği farklıdır: aynı aktif alarm, yeni delivery kimliğiyle veya reconnect sonrası gelse de kalıcı `logicalActivationId` bağı korunur. `EventInbox`, source event kimliği veya profilin doğrulanmış epoch/sequence/state-change mantığıyla deduplication yapar; `DecisionId`/`EffectId`, canonical olay/aktivasyon + sabitlenmiş policy sürümü + hedef + etkiyi tek command kaydına bağlar. Kaynak sequence/episode sağlamıyorsa cihazda varmış gibi gösterilmez; kalıcı ingress state ve snapshot uzlaştırmasının sınırı belirtilir. Yeni aktivasyon olup olmadığı ayırt edilemiyorsa yeni fiziksel komut üretmek yerine uzlaştırma gerekir. Eski bir `FireAlarmCleared`, yeni boot/aktivasyonun durumunu temizleyemez. Yeniden teslim edilen tarihsel olaylar mevcut bir göreve bağlanıp expiry/policy kontrolü geçmeden yeni fiziksel etki oluşturamaz.
+
+Activation/episode/version sağlayan kaynakta clear olayı doğru aktivasyonla eşleşir. Böyle bilgi yoksa korelasyon uydurulmaz; modelin onaylı fresh snapshot/reconciliation yöntemi ve gerektiğinde operatör doğrulaması gerekir. Ayırt edilemeyen clear, aktif kilidi sessizce kaldırmaz.
+
+Subscription cursor/offset, inbox, health ve configuration sürümü kalıcı tutulur. Backpressure/queue limiti veya güvenilmeyen kaynakta sessiz olay kaybı/normal durum varsayımı yerine kalite bozulması ve operator-required görünür olur. Bu pipeline edge'de çalışır; bina yangın algılama ve tahliye işlevleri listener'ın veya robotik platformun ayakta olmasına bağımlı hâle getirilmez.
+
+<a id="device-profiles"></a>
+
+### Doğrulanmış cihaz profilleri ve devreye alma — `PLANNED`
+
+Hızlı kurulum, yalnız IP adresi girmekten değil önceden doğrulanmış profili yeniden kullanmaktan gelir. `DeviceProfile`, üretici/model/hardware/firmware ve belge sürümü; adapter/protocol/BOM; **ayrı** readable signals ve allowed actions; transport/security; confirmation/fault/offline semantics; geometry/route kısıtları ve test kanıtını tanımlar. Bir profildeki write endpoint, readback veya röle state'i fiziksel sonucun sensörü olarak otomatik işaretlenmez.
+
+`SiteDeviceBinding`; tenant/site/gateway/device kimliklerini, credential reference'ı, network veya field I/O eşlemesini, sinyal anlamı/birimini, facility resource/zone/map'i, policy/robot hedeflerini ve binding sürümünü tutar. Register/pin/polarite gibi ayrıntılar yalnız model dokümanı ve commissioning kanıtıyla girilir. Secret doğrudan profil, kural veya audit kaydına yazılmaz.
+
+Önerilen dashboard sırası:
+
+1. Cihaz türü/modeli, doğrulanmış profile/version ve destekli adapter seçilir; bilinmeyen model için önce geliştirme/doğrulama gerekir.
+2. Network adresi veya gateway + fiziksel bağlantı ve credential reference tanımlanır.
+3. Girişler/çıkışlar semantik sinyallere eşlenir; alarm, fault, açık kapı ve röle komutu birbirine karıştırılmaz.
+4. Cihaz facility map'teki resource/zone/level'e bağlanır; robot geometrisi ve uygulanabilir rota kısıtları doğrulanır.
+5. İzinli robotlar/görevler, event routing ve site procedure sürümü seçilir. Serbest kural, emergency policy veya kontrolcünün interlock'unu aşamaz; keyfî register yazma paneli sunulmaz.
+6. Önce kimlik/bağlantı ve read-only state/fault testleri yapılır. Ayrı yetki ve bakım/işletim onayıyla kontrollü action + **bağımsız fiziksel feedback** testi yapılır. Notification testi için de receipt ve robot sonucu ayrı kaydedilir.
+7. Test kanıtı, reviewer/approver ve audit ile immutable config sürümü `DRAFT → VALIDATING → APPROVED → ACTIVE` olarak yayımlanır. Başarısız veya belirsiz test `ACTIVE` olmaz; credentials veya safety sınırı eksik profil saha için doğrulanmış sayılmaz.
+
+Yalnız listener profili gerçekten read-only ise action aşaması kapsam dışı olarak kaydedilir; command capability verilmez. `FIELD_VERIFIED` kapsamı model/firmware/site/binding/test tarihiyle sınırlıdır. Yeni model veya firmware değişimi otomatik miras almaz. Aktif görev sırasında sinyal/map/policy binding değişirse queued effect/goal eski sürümle gönderilmez; admission, reconciliation ve gerektiğinde controlled reconfiguration uygulanır. Rollback, son fiziksel durumu veya credential iptalini geçmişe döndürmez.
+
+<a id="field-packages"></a>
+
+### Saha donanımı ve kurulum paketleri — `PLANNED`
+
+| Paket adayı | İçerik/sorumluluk | Sınır |
+| --- | --- | --- |
+| `EventCollectionGateway` | Gateway, uygun input modülleri, source listener/normalizer ve health | Read-only olay/durum toplama; robot aksiyonu veya panel kontrolü garantisi değildir |
+| `PassageIntegrationGateway` | Gateway, onaylı I/O/röle arayüzü, gerekli fiziksel feedback sensörleri ve geçiş yazılımı | Output state, kapı açıklığı veya robotun geçtiği kanıtı değildir; cihaz interlock'u korunur |
+| `RedundantEdgeRuntime` | Uygun spare executor, güç/ağ düzeni, kalıcı state/cursor ve devralma yapılandırması | Mevcut MVP özelliği değildir; sadece biri yazabilir. Fencing/exclusive handoff doğrulanamıyorsa otomatik takeover yapılmaz |
+
+Yedek executor, kaynak profili izin veriyorsa salt okunur dinleyebilir; fiziksel aksiyon tetikleyen robot bildirimi de tek writer/fencing sınırına tabidir. Yedek bileşenin yeniden aldığı olaydan ikinci bir komut veya davranış tetikleyen bildirim üretmesi kabul edilmez.
+
+Paketler standart BOM veya satışı kararlaştırılmış fiyat planı değildir. İlk sahalarda uygun endüstriyel ürünlerin kendi yazılımımız ve doğrulanmış yapılandırmayla paketlenmesi; özel kart/firmware'in tekrar eden ihtiyaç görülünce geliştirilmesi aday yaklaşımdır. Donanım, kurulum/devreye alma, yazılım lisansı ve bakım desteği ayrı ticari kalem adaylarıdır; gelir modeli doğrulanmamıştır.
+
+Tesiste otomatik kapı mekanizması veya robotun geçebileceği uygun kapı/turnike açıklığı yoksa bunu yalnız yazılım çözmez. Gerekli fiziksel ekipman üretici/bakım/kurulum ortaklarıyla sağlanabilir; sorumluluk ve saha kabulü açıkça ayrılır. Kullanılabilir bir kontrol girişi/durum çıkışı da yoksa rastgele röle yerine üretici/servis sağlayıcıyla uygun entegrasyon modülü veya ekipman dönüşümü değerlendirilir.
 
 ## 5. Karar ve komut yetkisi
 
@@ -290,14 +375,23 @@ Bu bölümdeki kaynaklar **2026-11-10 tarihinde incelenmiş referanslardır**. S
 | Özel saha donanımı + firmware + gateway | Uygun arayüz yokken onaylı sinyal sınırını kurmak | Elektriksel I/O tipi/seviyesi, izolasyon, interlock, watchdog/fail state, feedback kaynağı, firmware/update ve saha test planı | `PLANNED`; kart/firmware tasarımı yok |
 | Asansör | Çağırma, seçili kat, door/floor/cabin durumu | OEM/servis sağlayıcı arayüzü, kat kodları, erişim/yangın işletimi, session authority | Yalnız `SIMULATED` |
 | Otomatik kapı/erişim sistemi | Açılma isteği, access decision ve açık/kapalı/engel feedback | Kapı + kontrolcü + access controller modeli, belgelenmiş izinli sinyaller, sensörler | Yalnız `SIMULATED` |
+| Bariyer/turnike/robot geçiş kapısı | Yetkili giriş ve passage/clearance takibi | Açıklık, robot/yük footprint'i, detection, izinli hareket ve bağımsız physical feedback | `PLANNED`; insan sensörü robotu algılıyor varsayılmaz |
+| Yolcu yürüyen bandı/yürüyen merdiven | İlk etapta observe-only durum ve rota kısıtları | Ekipman/model, durum semantiği, no-go/route enforcement; binme için ayrıca robot–ekipman doğrulaması | `PLANNED`; boarding/control varsayılan `UNSUPPORTED` |
+| Endüstriyel konveyör | Robotla yük teslim alma/verme ve transfer handshake | Yön, hazır/meşgul/başladı/tamamlandı anlamları, yük/robot hizası ve ayrı transfer/clearance feedback | `PLANNED`; üretici bit/register veya pulse süresi seçilmedi |
 | Fiziksel trafik ışığı | Ortak geçiş için gösterge/control state | Lamba değil kontrolcünün modeli, renk/izin anlamı, feedback ve bağlantı kaybı davranışı | `PLANNED` |
 | Yangın alarmı olayları | Güvenilir olayın site prosedürüne göre görevlere etkisi | Panel/model, olay arayüzü, zone mapping, source trust ve onaylı prosedür | Sabit demo politikası `SIMULATED`; gerçek panel yok |
 | Eaton adayı | Belgelenmiş rolüne göre PLC/akıllı röle/I/O veya başka kontrolcü | **Tam model/part number ve firmware olmadan cihaz tipi/protokol seçilmez**; lisans ve wiring manual gerekir | `PLANNED / ModelUnknown` |
+| Bosch AVENAR adayı | Belgelenmiş FSI/OPC/BACnet seçeneklerinden uygun olay/durum listener'ı | Panel/model/firmware, ilgili server/SDK ve lisanslar; BACnet server V1.0 belgesi read-only yönü gösterir | `PLANNED / ModelProfilePending`; panel kontrolü veya alarm reset desteği iddia edilmez |
+| Advantech ADAM-6266 adayı | Üretici sayfasındaki dijital giriş/röle çıkışı ve network arayüzü üzerinden field gateway | Hardware/firmware, giriş/çıkış semantiği, izinli write, feedback sensörü ve transport security profili | `PLANNED / ModelProfilePending`; repo adapter'ı ve saha uygunluk kanıtı yok |
 | REST / MQTT | İlgili cihaz belgeliyorsa command/observation transport'u | API veya topic/schema/version, auth/TLS/ACL, QoS/retain/session/correlation | İç REST mevcut; harici cihaz REST/MQTT adaptörü yok |
 | Modbus / OPC UA / BACnet | Belgelenmiş register/object/service üzerinden entegrasyon | Model-specific address/object map, tip/birim, izinli write, handshake, polling/event ve güvenlik özellikleri | `PLANNED`; register/object adresi seçilmedi |
 | Dijital I/O | Onaylı giriş/çıkış sinyallerini okuyup sürmek | Dry contact/gerilim tipi, izolasyon/polarite, pulse/level, debounce, feedback ve fail state | `PLANNED`; pin/elektriksel davranış bilinmiyor |
 
 Bir cihazın açma çıkışını sürmek, açık sensörü okuyabildiğimiz anlamına gelmez. Okuma ve yazma farklı arayüzlerden yapılacaksa observation fusion ve sole-writer sınırı açıkça tanımlanır. Belgelenmeyen register, endpoint, topic, röle polaritesi veya alarm reset davranışı eklenmez. Bilinmeyen yerler yalnızca etiketli simulator ve `CapabilityProfile`/adapter port'larıyla temsil edilir.
+
+**2026-11-11 tarihli aday kaynak kontrolü:** [Bosch'un resmî AVENAR ürün sayfası](https://www.boschbuildingtechnologies.com/lifesafetysystems/en/products/fire-alarm-control-panels/), sisteme göre FSI server, OPC veya BACnet server seçeneklerini belirtir; her panelde aynı native API olduğu çıkarılamaz. [16 Ocak 2025 tarihli BACnet server V1.0 teknik bilgisi](https://media.boschsecurity.com/fs/media/pb/media/extranet/fire_alarm_system/tech_info_en/2624_2024_TI_EN_AVENAR_BACnet_server_V1.0.pdf) belirli firmware/RPS/OS/lisans profili tarif eder ve o sürümde BMS'den panele komut göndermeyi desteklemez. Dolayısıyla bu belge kontrol değil **read-only alarm/state listener adayı** için kanıttır; en yeni saha BOM'u seçimi değildir.
+
+[Advantech'in resmî ADAM-6266 model sayfası](https://www.advantech.com/en-us/products/7447e150-338d-402d-b5a1-c9ce6d98816e/adam-6266/mod_b239f2aa-3498-4ac2-8ecb-e6c7b319f903), 4 dijital giriş + 4 röle çıkışı ve MQTT(TLS), Modbus TCP, RESTful arayüzlerini listeler. Bu model bilgisi entegrasyon sınıfına örnektir; güvenli kapı kontrolü veya doğru alarm-kablo gözetimi kanıtı değildir. MQTT(TLS) desteğinden REST mTLS veya bütün protokollerde TLS sonucu çıkarılmaz. Her iki aday için de erişim bilgisi, register/sinyal mapping ve elektriksel saha profili henüz seçilmemiştir.
 
 ## 11. AWS IoT Greengrass V2 dağıtım adaptörü
 
@@ -329,9 +423,9 @@ Her aşama bir önceki güven sınırını korur. P0 dışındakiler **plan** du
 | `P0 — Baseline` | Mevcut kodu/demoları koru; kapsam ve sözleşmeleri kaydet | Uygulama değişmeden destek durumları, boşluklar ve açık kararlar bu belgede ayrılmış |
 | `P1 — AuthorizedDoorPassage MVP` | Bir simüle robot + bir simüle kapı; kimlik → yetki → command → fresh feedback → grant → robot exit → audit | Aşağıdaki P1 kabul testleri fiziksel ekipman olmadan otomatik geçer; mevcut demolar regresyon olarak kalır |
 | `P2 — TwoRobotMultiFloor` | İki robot, iki level, bir asansör ve bir kapı; kimlikli rezervasyon/queue/holding points | Aynı kaynağa çifte grant yok; kat/kapı/kabin/exit doğrulaması ve kayıp teyitte kaynak tutma testleri geçer |
-| `P3 — OneVerifiedAdapter Pilot` | Seçilmiş tek robot/fleet ve tek bina cihazı; üç bağlantı yolundan uygun olanı; gerekiyorsa firmware/gateway | Model/firmware/protocol/route constraints/safety procedure ve security profili doğrulanmış; ACK/result ayrımı ve saha failure testleri kayıtlı |
+| `P3 — OneVerifiedAdapter Pilot` | Seçilmiş tek robot/fleet ve tek bina cihazı; üç bağlantı yolundan uygun olanı; source listener + ayrı izinli command capability; gerekiyorsa firmware/gateway | Model/firmware/protocol/route constraints/safety procedure ve security profili, read-only/fault/controlled-action commissioning testleri doğrulanmış; ACK/result ayrı kayıtlı |
 | `P4 — ManagedEdge` | Cloud inventory/config/audit, kayıt/sertifika ömrü, Greengrass component BOM/deployment/OTA | Aynı domain yerelde ve component olarak aynı contract testlerini geçer; internet kesintisi, revocation TTL, update/restart/reconciliation ve replay=0 testleri geçer |
-| `P5 — AdditionalProfiles` | İhtiyaca göre VDA/ROS/RMF/MassRobotics profilleri, fiziksel traffic light ve daha fazla vendor | Her yeni profil için versioned capabilities, authority ve conformance kanıtı; desteklenmeyen özellikler açıkça `UNSUPPORTED` |
+| `P5 — AdditionalProfiles` | İhtiyaca göre robot protokol profilleri, fiziksel traffic light/bariyer/turnike, conveyor transfer; passenger equipment için observe-only rota kısıtları | Her yeni profil için versioned read/write/notification capabilities, geometry/feedback, authority ve conformance kanıtı; doğrulanmamış boarding/komut `UNSUPPORTED` |
 
 Güvenlik ilk kez P4'te eklenmez: P1'de identity/policy/audit, P2'de authority/fencing/reservation, **P3 saha öncesinde** gerçek enrollment, desteklenen bağlantılarda mTLS, rotation/revocation ve site izolasyonu gereklidir. Greengrass'ın otomatik merkezi rollout'u ayrı aşamadır.
 
@@ -363,6 +457,18 @@ Güvenlik ilk kez P4'te eklenmez: P1'de identity/policy/audit, P2'de authority/f
 P3'te eşiğin hangi sensör/pose ile boş sayıldığı, cihaz timeout'ları, kapı/kat kodları ve route toleransları üretici dokümanı ve saha ölçümüyle belirlenir; bu belge sayı uydurmaz. Yetkisiz yazma, bağlantı kaybı, cihaz fault'u ve manuel müdahale ilgili gerçek profile'da denenmeden `FIELD_VERIFIED` etiketi verilmez.
 
 P4'te geçerli policy ile izinli offline local iş, expired policy ile yeni görev reddi, offline revocation gecikmesi, outbox kapasitesi, reconnect deduplication, sertifika yenileme/iptali ve aktif görev sırasında component restart test edilir. Yeni deployment, dolu/belirsiz kaynağı boş göstermemeli; süresi geçmiş hareket göndermemelidir. TLS'siz legacy bağlantının mTLS testi geçmiş gibi raporlanması kabul edilmez.
+
+### Yeni listener, devreye alma ve ekipman profili kabul kapıları — plan
+
+- Robot yokken listener event/health toplamayı sürdürür. Alarm aktifken sonradan bağlanan robot current-state snapshot ile politikaya tabi olur; yeni alarm olayı beklenmez.
+- Subscription/notification/polling fixture'ları aynı canonical anlamı üretir. Duplicate event veya tekrarlanan active poll hedef başına ikinci effect/dispatch üretmez. Reconnect + yeni delivery kimliği + aynı logical activation için de ikinci dispatch sıfırdır; boot/reconnect sonrası eski clear yeni alarmı temizleyemez.
+- Source loss, device fault, giriş kablosu arızası ve alarm inactive birbirinden ayrılır. Ayırt edilemeyen sinyal `UNKNOWN` kalır; timeout'tan clear, passage grant veya auto-resume çıkmaz.
+- Event-only robot receipt verirken command-capable robot ACK verip hiç sonuç bildirmeyebilir. İkisi de doğrulanmamış task aksiyonunu başarılı göstermez. Yetkisiz veya unsupported etki için dispatch sıfırdır; davranış tetikleyen notification da aynı kuralı geçer.
+- Source signal veya profile yanlış site/zone/resource'a bağlanırsa publish reddedilir. Read-only test başarılı olsa bile gerekli physical feedback/action test'i yoksa control capability etkinleşmez. Dashboard kuralı emergency policy/interlock'u aşamaz.
+- Relay/coil readback başarılı fakat kapı açılmamışken geçiş izni verilmez. Turnike geometrisi/detection uygun değilse grant verilmez; yürüyen merdivene binme doğrulanmamışsa rota dışı tutulur. Conveyor örnek adımları vendor sinyallerine ancak belgelenmiş handshake + ayrı transfer-complete feedback ile bağlanır.
+- Aktif görev varken profile/map/signal binding değişimi eski queued effect'i dispatch etmez. Spare edge event replay'i ikinci writer veya bildirim yan etkisi oluşturamaz. OTA/devir sonrası fiziksel occupancy korunur.
+
+Bu testler ilk etapta deterministic source/listener ve robot/device simülatörleriyle çalışır. İlk teknik MVP'yi bütün cihazlara açmak için büyütmez: P1 kapı vertical slice'ı korunur; ilgili listener/profile case'i P3 ve sonrasına aşamalı eklenir. Senaryo adımları ve negatif test matrisi [use-cases.md](use-cases.md) içindedir.
 
 ## 13. İlk küçük geliştirme görevi
 
@@ -398,6 +504,10 @@ Robot navigation simulator, correlated `DoorOpen`/exit akışı ve tam P1 restar
 | Otomatik/manual kontrol devri ve yasak bölge/route constraints nasıl uygulanıyor? | Platformun komut ve erişim yetkisini gerçekten uygulatmak |
 | Kapı/asansör/access controller/Eaton için tam model, lisans ve doküman nedir? | Üç bağlantı yolunun seçimi; adres/komut/sensör uydurmamak |
 | Alarm source'u, zone eşlemesi ve onaylı tesis yangın prosedürü nedir? | Evrensel fiziksel davranış varsaymadan emergency policy |
+| Kaynak subscription/notification mı polling mi; snapshot, heartbeat, episode/boot/sequence ve fault bilgisi sunuyor mu? | Listener lifecycle, deduplication, stale clear ve UNKNOWN davranışı |
+| Input/output anlamları, supervisory wiring, fiziksel feedback ve izinli kontrollü test prosedürü nedir? | Kablo kopmasını normalden ayırmak; relay ACK'ini fiziksel sonuç saymamak |
+| Bariyer/turnike açıklığı, algılama ve robot footprint'i; conveyor handshake veya passenger-equipment rolü nedir? | Geçiş/transfer ile observe-only rota kısıtını ayırmak |
+| Profile/config yayın onayı ve üretici/bakım/kurulum ortaklarının sorumlulukları kimde? | Devreye alma kanıtı, değişiklik kontrolü ve destek sınırı |
 | Kat adları, robot/tesis harita sürümleri, frame/birimler, footprint ve calibration kanıtları nedir? | Doğru hedef ve doğrulanabilir clearance |
 | Gateway OS/CPU, yerel network, TPM/HSM ve fiziksel I/O gereksinimleri nedir? | Firmware/adapter/package ve kimlik güven sınırı |
 | Offline işlem süresi, policy/revocation yaşı, event freshness ve audit retention sınırları nedir? | Bounded offline yetki, disk bütçesi ve işletim davranışı |

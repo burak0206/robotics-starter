@@ -199,7 +199,7 @@ Bu faydalar ürün hedefleridir. İlk müşteri segmenti, pilot tesis ve gelir m
 2. Tesiste mevcut kontrolcü varsa cihazın belgelenmiş arayüzü üzerinden bağlantı.
 3. Uygun arayüz yoksa ve saha incelemesi desteklenebilir bir bağlantı gösteriyorsa saha donanımı, firmware ve gateway üzerinden entegrasyon.
 
-Hedef cihazlar asansörler, otomatik/kartlı kapılar, erişim sistemleri, fiziksel trafik ışıkları ve yangın alarmı olaylarıdır. Özel kart geliştirmek ilk kurulumun önkoşulu değildir; mevcut endüstriyel gateway/I/O ürünleri uygunsa değerlendirilebilir. Marka adından cihaz tipi veya protokol çıkarılmaz; her modelin komutları, geri bildirimleri ve güvenlik sınırları dokümantasyonla doğrulanmalıdır. Her cihazın bağlanabileceği taahhüt edilmez.
+Hedef cihazlar asansörler, otomatik/kartlı kapılar, erişim sistemleri, bariyerler, turnikeler, konveyörler, fiziksel trafik ışıkları ve yangın alarmı olaylarıdır. Yürüyen bant ve yürüyen merdivenler için izleme ve rota kısıtları değerlendirilebilir; robotun bunlara binebileceği varsayılmaz. Özel kart geliştirmek ilk kurulumun önkoşulu değildir; mevcut endüstriyel gateway/I/O ürünleri uygunsa değerlendirilebilir. Marka adından cihaz tipi veya protokol çıkarılmaz; her modelin komutları, geri bildirimleri ve güvenlik sınırları dokümantasyonla doğrulanmalıdır. Her cihazın bağlanabileceği taahhüt edilmez.
 
 ### Planlanan yetenekler
 
@@ -208,6 +208,26 @@ Hedef cihazlar asansörler, otomatik/kartlı kapılar, erişim sistemleri, fizik
 - **Farklı üreticiler ve robot arayüzleri:** Robotla doğrudan veya üreticinin filo yöneticisi üzerinden bağlantı; ROS 2, VDA 5050, Open-RMF ve MassRobotics için ayrı, capability tabanlı adaptör sınırları. Bunlar eşdeğer işlevler sağlamaz; yalnızca doğrulanmış sürüm ve cihaz yetenekleri sunulmalı. Fiziksel trafik ışığı, Open-RMF'nin `Traffic Light` koordinasyon arayüzünden ayrı ele alınmalı.
 - **Tesis koordinasyonu:** Çoklu robot ve ortak kaynak kullanımı, kat/harita/frame dönüşümleri ve açık komut sahipliği. Platform politika ve görev kararlarını yönetirken lokal navigasyon ve çarpışma önleme robotta kalmalı; bağımsız bileşenler aynı robota çelişkili komut göndermemeli.
 - **Edge ve çok tesisli yönetim:** Yerel gateway'de adaptör, görev ve politika yürütme; cloud tarafında envanter, yapılandırma, izleme, audit ve güncelleme yönetimi. AWS IoT Greengrass V2 planlanan bir dağıtım seçeneğidir; temel iş mantığı onsuz da yerelde çalışıp test edilebilmeli. Offline yetki sınırlandırılmalı, reconnect'te süresi geçmiş hareket komutları yeniden oynatılmamalı.
+
+### Tesis olayından doğrulanmış sonuca
+
+Robotun geçiş talebinden bağımsız çalışan `SourceListener` adaptörleri hedeflenir. Abonelik, bildirim veya polling yöntemi doğrulanmış cihaz profiline göre seçilir. Alarm, cihaz arızası, bağlantı kaybı ve eski veri ayrı durumlardır; sinyal gelmemesi **alarm yok** anlamına gelmez. Normalleştirilen olayın kaynak kimliği, zamanı ve veri kalitesi korunmalıdır.
+
+`FacilityEvent`, tesisin `SiteEmergencyPolicy` kurallarına göre değerlendirilir. `RobotEventPort` üzerinden desteklenen olay bildirimi ile `RobotCommandPort` üzerinden yetkili komut farklı çıktılardır; olay bildirimi görev iptali veya fiziksel duruş sayılmaz. Komut için kimlik/yetki, capability ve komut sahipliği kontrol edilir; `CommandAccepted` ile `VerifiedOutcome` ayrı izlenir. Okuma, yazma ve geri bildirim yetenekleri birbirinden bağımsız doğrulanır: rölenin sürülmesi veya çıkışın okunması kapının fiziksel olarak açıldığını kanıtlamaz.
+
+### Profil tabanlı devreye alma
+
+Planlanan dashboard akışı: doğrulanmış model/firmware ve arayüz profili seçimi → kaynak/gateway ve I/O anlamlarının tanımı → resource/kat/harita eşlemesi → politika, etkilenen robotlar ve yetki ataması → bağlantı/arıza/eski veri ve salt okunur testler → izinli eylemlerin ayrı sonuç doğrulaması → yetkili onayla sürümlü yapılandırmayı yayınlama. Salt okunur bir profil kendiliğinden yazma yetkisi kazanmaz; devreye alma testi sahada onaylanmamış bir fiziksel komut üretmemelidir. Bu ekranlar ve profil yayınlama akışı henüz uygulanmadı.
+
+### Aday saha donanımı paketleri
+
+| Planlanan paket | Amaç ve sınır |
+| --- | --- |
+| `EventCollectionGateway` | Belgelenmiş kaynaklardan olay/durum toplama; cihazı kontrol edebildiği varsayılmaz |
+| `PassageIntegrationGateway` | Onaylı kapı/bariyer/turnike bağlantılarında komut ve bağımsız fiziksel geri bildirim sınırı |
+| `RedundantEdgeRuntime` | Yerel süreklilik için aday; tek aktif komut yazarı, doğrulanmış fencing ve kontrollü devir olmadan yedek node hareket yetkisi alamaz |
+
+Bunlar hazır donanım ürünleri değildir. Önce uygun endüstriyel gateway/I/O seçenekleri değerlendirilir; özel kart ve firmware ihtiyaca göre geliştirilir. Üretici, yetkili tesis ekipleri ve saha entegrasyon ortaklarıyla elektriksel anlamlar, kurulum sorumluluğu ve doğrulama kapsamı belirlenmelidir.
 
 ### Teknik doğrulamadan ticari pilota
 
@@ -425,7 +445,7 @@ These benefits are product goals. The first customer segment, pilot site, and re
 2. Connect through an existing controller's documented interface when the site has one.
 3. Use field hardware, firmware, and a gateway when no suitable interface exists and a site assessment identifies a supportable connection.
 
-Target equipment includes elevators, automatic/card-controlled doors, access systems, physical traffic lights, and fire alarm events. A custom circuit board is not a prerequisite for the first installation; existing industrial gateways and I/O products may be evaluated where suitable. Device type or protocol must not be inferred from a brand name. Commands, feedback, and safety boundaries must be verified for each model from its documentation. Support for every device is not promised.
+Target equipment includes elevators, automatic/card-controlled doors, access systems, barriers, turnstiles, conveyors, physical traffic lights, and fire alarm events. Monitoring and route constraints may be evaluated for moving walkways and escalators; robots must not be assumed capable of boarding them. A custom circuit board is not a prerequisite for the first installation; existing industrial gateways and I/O products may be evaluated where suitable. Device type or protocol must not be inferred from a brand name. Commands, feedback, and safety boundaries must be verified for each model from its documentation. Support for every device is not promised.
 
 ### Planned capabilities
 
@@ -434,6 +454,26 @@ Target equipment includes elevators, automatic/card-controlled doors, access sys
 - **Different manufacturers and robot interfaces:** Connect directly to a robot or through its manufacturer's fleet manager, with separate capability-based adapter boundaries for ROS 2, VDA 5050, Open-RMF, and MassRobotics. These do not provide equivalent functionality; only verified versions and device capabilities should be exposed. Physical traffic lights must be treated separately from Open-RMF's `Traffic Light` coordination interface.
 - **Facility coordination:** Multiple robots and shared resources, floor/map/frame transformations, and explicit command ownership. The platform manages policies and task decisions while local navigation and collision avoidance remain on the robot. Independent components must not send conflicting commands to the same robot.
 - **Edge and multi-site management:** Run local adapters, tasks, and policies on a gateway; manage inventory, configuration, monitoring, audit, and updates in the cloud. AWS IoT Greengrass V2 is a planned deployment option; core logic should also run and be tested locally without it. Offline authority must be bounded, and expired movement commands must not be replayed after reconnection.
+
+### From a facility event to a verified outcome
+
+Planned `SourceListener` adapters operate independently of a robot requesting passage. Subscription, notification, or polling is selected for the verified device profile. Alarm, device fault, connectivity loss, and stale data are separate states; **no signal does not mean no alarm**. Normalized events must preserve source identity, time, and data quality.
+
+A `FacilityEvent` is evaluated under the site's `SiteEmergencyPolicy`. A supported event notification through `RobotEventPort` and an authorized command through `RobotCommandPort` are different outputs; an event notification does not count as task cancellation or physical stopping. Commands require identity/authorization, capability, and command ownership checks; `CommandAccepted` and `VerifiedOutcome` are tracked separately. Read, write, and feedback capabilities are verified independently: driving a relay or reading an output does not prove that a door physically opened.
+
+### Profile-based commissioning
+
+The planned dashboard flow is: select a verified model/firmware and interface profile → define source/gateway and I/O meanings → map resources, floors, and maps → assign policies, affected robots, and authority → run connectivity/fault/stale-data and read-only tests → verify the separate outcomes of permitted actions → publish versioned configuration with authorized approval. A read-only profile does not automatically gain write authority, and a commissioning test must not produce a physical command that has not been approved for that site. These screens and the profile publishing workflow are not implemented yet.
+
+### Candidate field hardware packages
+
+| Planned package | Purpose and boundary |
+| --- | --- |
+| `EventCollectionGateway` | Collect events/status from documented sources; device control must not be assumed |
+| `PassageIntegrationGateway` | A boundary for commands and independent physical feedback on approved door/barrier/turnstile connections |
+| `RedundantEdgeRuntime` | A candidate for local continuity; a standby node cannot gain movement authority without a single active command writer, verified fencing, and controlled handoff |
+
+These are not ready-made hardware products. Suitable industrial gateway/I/O options are evaluated first; custom boards and firmware are developed as needed. Manufacturers, authorized site teams, and field integration partners must establish electrical meanings, installation responsibilities, and the scope of validation.
 
 ### From technical validation to a commercial pilot
 

@@ -185,3 +185,110 @@ Bu kontroller gelecek implementasyon ve saha profili içindir; mevcut testlerin 
 | Devreye alma/yayımlama | Salt okunur ve kontrollü test kanıtları doğru profile bağlıdır; yetkisiz/onaysız sürüm etkinleşmez, yayımlayan aktör/sürüm/onay/test sonucu audit'te bulunur; yayımlama anlık fiziksel hareket başlatmaz |
 
 Fiziksel geçiş ışığı ve robot trafik koordinasyonundaki “Traffic Light” ayrı konulardır. Hangi kontrolcü ve saha senaryosunun hedeflendiği ayrıca netleştirilecek; bu plan bunlar için protokol veya cihaz desteği ilan etmez.
+
+<a id="unloc-delivery"></a>
+
+## Planlanan Unloc teslimat case'leri — `PLANNED`
+
+Pilot hedefi **tek robot, tek bina girişi ve girişten asansör gerektirmeden ulaşılabilen ortak teslimat alanıdır**. Tek girişin çıkış yönündeki kullanım yöntemi de ayrıca doğrulanır; giriş yetkisi çıkış izni/kanıtı değildir. Daire içi teslimat, asansörlü rota ve çok binalı operasyon sonraki kapsamlardır. Aşağıdaki UC-03, sonraki çok kapılı genişlemeyi ve ortak çıkış koşullarını tanımlar; pilotta çok kapılı/asansörlü teslimatın hazır olduğu anlamına gelmez.
+
+**Kullanıcı gözlemi:** bu binada Unloc kullanımıyla kilidin açıldığı ve motorlu kapı kanadının açıldığı bildirildi. Bu gözlem, API'nin motoru tetiklediğinin veya fiziksel açık/kilit durumunu raporladığının teknik doğrulaması değildir. Bu bina/proje için kilit/kontrolcü modeli, online/Bluetooth erişim yolu, API kullanım hakkı ve yetki kapsamı; motor tetikleme, açık/kilit feedback'i, açık tutma, geçiş algılama ve yeniden kilitleme yetenekleri henüz doğrulanmamıştır. Resmî kaynaklar, yetenek/destek matrisi ve sorumluluk sınırları için tek referans [Unloc erişim kapsamı](product-scope.md#unloc-access) bölümüdür.
+
+Bu case'ler dokümantasyon tasarımıdır; mevcut üç simülasyona Unloc adaptörü, yeni REST/gRPC ucu, SDK veya saha desteği eklemez. Aşağıdaki açılma/geçiş adımları, ilgili capability ve kanıt kaynağı doğrulanmadan otomatik olarak çalıştırılamaz. Kilit işleminin sağlayıcı tarafından doğrulandığı yanıt dahil Unloc isteğinin kabulü ile **taze, güvenilir fiziksel `DoorOpen` ve bütün robot/yük footprint'inin clearance kanıtı ayrıdır**. Eski, başka kapıya/göreve ait veya güvenilmeyen feedback geçiş izni üretmez; erişim olayı/bildirim kaydı fiziksel sonuç değildir. Mobil anahtar bildirimlerinin doğrudan API işlemlerini de kapsadığı varsayılmaz.
+
+### UC-01 — Ortak girişten ortak teslimat alanına erişim
+
+**Aktörler:** teslimat robotu, görev veren yetkili kullanıcı/entegratör, platform görev/erişim koordinatörü, onaylı erişim adaptörü ve bina operatörü.
+
+**Önkoşullar:** pilot bina girişi ve ortak teslimat alanı haritada tanımlı; robot/yük açıklığa uygun; bina sahibinin entegrasyon izni, kullanılabilir erişim hakkı, kapı feedback/clearance yöntemi ve dönüşte çıkış yöntemi doğrulanmış olmalıdır. Robotun tek `CommandOwner`'ı ve kapı kaynağının komut sahibi atanır. Doğrulanamayan API veya fiziksel açılma yeteneğiyle otonom geçişe başlanmaz.
+
+**Tetikleyici:** izinli teslimat görevindeki robot, bina girişindeki tanımlı yaklaşma/bekleme noktasına ulaşır.
+
+**Ana akış:**
+
+1. Platform görev, robot, bina/kapı ve zaman kapsamını değerlendirir; geçiş kaynağını göreve ayırır.
+2. Son gönderim sınırı yetki/politika sürümünü, capability'yi ve kontrol sahipliğini yeniden doğrular; yalnız doğrulanmış erişim arayüzüne izinli talep gönderilir.
+3. Talep ACK'i kaydedilir. Robot, kapının fiziksel olarak açıldığını ve geçiş açıklığının uygun olduğunu gösteren taze kanıt gelene kadar bekler; ACK ile geçiş başlatılmaz.
+4. Robot hareketini mevcut tek `CommandOwner` yürütür. RMF veya vendor fleet manager bu owner ise platform ona paralel ikinci bir hareket yolu açmaz.
+5. Robotun yük dahil tamamının giriş eşiğini geçtiği doğrulanır; kaynak ancak gerekli clearance koşullarıyla bırakılır. Robot ortak teslimat alanına ilerler ve varışı doğrulanır.
+
+**Hata durumları:** izin reddi veya doğrulanmamış capability'de fiziksel talep yoktur. ACK sonrası kapı açılmazsa, feedback eski/güvenilmezse veya engel algılanırsa geçiş verilmez; UC-04 hata/devralma akışı uygulanır. Kilit açıldı bilgisinden motorlu kanadın açıldığı sonucu çıkarılmaz.
+
+**Başarı kriteri:** yetkili giriş, doğrulanmış tam geçiş ve ortak teslimat alanına varış kanıtı aynı görevle ilişkilidir. Paketin teslim edildiği iddiası ayrıca görev profilinin teslim kanıtını gerektirir; alana varış veya unlock ACK'i paket teslim kanıtı değildir.
+
+### UC-02 — Görev ve zamanla sınırlı erişim
+
+**Aktörler:** görev sahibi/yetkili kullanıcı, platform kimlik ve erişim politikası, robot, erişim adaptörü ve yetkili bina yöneticisi.
+
+**Önkoşullar:** erişim kararı robot/görev/bina/kapı ve açık zaman aralığıyla bağlı; saat/zaman dilimi ve credential yetki kapsamı doğrulanmış olmalıdır. Unloc'un bu sınırları kendi arayüzünde nasıl temsil ettiği bilinmiyorsa sağlayıcı özelliği uydurulmaz; platform kendi gönderim sınırını uygular ve gerekli sağlayıcı kısıtlarını ayrıca doğrulatır.
+
+**Tetikleyici:** görevin giriş/çıkış için erişim talep etmesi veya bekleyen talebin zaman/yetki koşullarının değişmesi.
+
+**Ana akış:**
+
+1. Platform izinli göreve, robota ve kapıya bağlı süreli erişim kararını oluşturur; bu karar genel ve süresiz bina erişimi sayılmaz.
+2. Dispatch anında görev hâlâ geçerli mi, zaman aralığı açık mı, yetki/politika ve kontrol otoritesi güncel mi yeniden denetlenir.
+3. İzinli talebin kimliği, sonucu ve yerel deduplication kaydı platformda tutulur; yinelenen talep kendiliğinden yeni fiziksel işlem üretmez. Sağlayıcıdaki bir korelasyon/trace alanının idempotency sağladığı varsayılmaz. Kabul ACK'i ile kapı açılma sonucu ayrı izlenir.
+4. Görev veya erişim süresi bittiğinde yeni gönderim/admission kapanır. Daha önce gönderilmiş talebin fiziksel sonucu ayrıca uzlaştırılır; robotun eşikte olduğu varsayılan süreyle silinmez.
+
+**Hata durumları:** başka görev/robot/kapı, süresi geçmiş izin, iptal edilmiş hak veya doğrulanamayan saat/yetki yeni dispatch üretmez. Gönderimden sonra süre dolması ya da yanıt kaybı, kapının hiç açılmadığını veya yeniden kilitlendiğini kanıtlamaz. Kör retry veya süre doldu diye kaynağı boş bırakma yoktur.
+
+**Başarı kriteri:** yalnız geçerli görev/zaman kapsamında izinli erişim gönderilmiştir; reddedilen ve süresi geçmiş taleplerin komut dispatch sayısı sıfırdır. Erişim kararları, gönderimler ve bağımsız fiziksel sonuçlar audit'te ayrıdır; sağlayıcıda süre sınırının uygulandığı iddia ediliyorsa bunun ayrıca doğrulanmış kanıtı vardır.
+
+### UC-03 — Birden fazla kapı ve binadan çıkış
+
+**Aktörler:** robot, mevcut `CommandOwner`, görev/kaynak koordinatörü, her kapının yetkili erişim adaptörü ve gerektiğinde ayrı asansör entegrasyonu/operatörü.
+
+**Önkoşullar:** bu genişleme pilot dışıdır. Her kapı için ayrı erişim hakkı, cihaz profili, feedback, açıklık/footprint ve clearance kanıtı gerekir. Çıkış yolu girişten önce planlanır; serbest çıkış, otomatik açılma, açık tutma veya yeniden kilitleme varsayılmaz. Rota kat değiştiriyorsa ayrıca doğrulanmış asansör erişimi/koordinasyonu gerekir; Unloc kapı erişimi bu bağımlılığı karşılamaz ve mevcut asansör simülasyonu saha kanıtı değildir.
+
+**Tetikleyici:** görevin sonraki geçiş kaynağına ulaşması veya ortak teslimat alanından bina çıkışına dönmesi.
+
+**Ana akış:**
+
+1. Platform kapıları ve gerekiyorsa ayrı asansör kaynağını içeren izinli rotayı/çıkışı planlar; kaynak alma sırası mevcut koordinasyon politikasına uyar.
+2. Her kapı için UC-02 yetki/zaman denetimi ve UC-01 fiziksel açılma doğrulaması yeniden uygulanır; ilk kapının ACK'i sonraki kapılar için izin değildir.
+3. Tek `CommandOwner` geçişi yürütür. Önceki kaynak bütün robot/yük clearance'ı doğrulanana kadar tutulur; sıradaki kaynağın beklenmesi öncekinin boşaldığı anlamına gelmez.
+4. Dönüşte çıkış kapısı için de doğrulanmış erişim/geçiş yöntemi uygulanır. Tam çıkış teyidi alınır; kapanma/yeniden kilitleme prosedürü varsa yalnız belgelenmiş yetenek ve bağımsız kanıtla değerlendirilir.
+
+**Hata durumları:** bir kapının veya ayrı asansör bağımlılığının desteklenmemesi, zaman izninin bitmesi, sonraki kaynağın kullanılamaması veya çıkış teyidinin kaybında rota tamamlandı sayılmaz. Kapılar arasında tahmini açık tutma süresi veya doğrulanmamış genel unlock tekrarı kullanılmaz; UC-04 uygulanır.
+
+**Başarı kriteri:** her geçişin yetki, açılma ve tam çıkış kanıtı kendi kaynağı/görev adımıyla ilişkilidir; binadan çıkış doğrulanmıştır. Prosedürün gerektirdiği kapanma/kilit sonucu kanıtsızsa bilinmeyen/operatör doğrulaması gereken durum olarak kalır; bütün bina erişimi normale döndü diye raporlanmaz.
+
+### UC-04 — Hata yönetimi ve operatöre devir
+
+**Aktörler:** robotun mevcut kontrol sahibi, platform görev/erişim koordinatörü, erişim/observation adaptörleri ve yetkili bina/robot operatörü.
+
+**Önkoşullar:** site prosedürü hata/timeout, capability'ye bağlı bekleme/iptal, operatör rolü ve kontrol devri yöntemini tanımlar. Robotun son bilinen konumu ile kaynak doluluğu, görev durumundan ayrı tutulur; manuel hareket için de kontrol sahipliği uzlaştırılır.
+
+**Tetikleyici:** yetki reddi, erişim API'si veya WAN kesintisi, kapının açılmaması, geçiş engeli, robot bağlantısının kaybı ya da çıkış kanıtının gelmemesi.
+
+**Ana akış:**
+
+1. Hata gönderim öncesi ret, gönderim sonrası sonucu bilinmeyen işlem veya fiziksel geçiş engeli olarak ayrılır; fiziksel başarı uydurulmaz.
+2. Yetki reddi gönderim üretmez. API/WAN kaybı ya da ACK sonrası yanıtsızlıkta erişim sonucu uzlaştırılır; doğrulanmış destek yokken Bluetooth/offline alternatifine geçilmez.
+3. Kapı açılmazsa veya açıklık engelliyse robot geçiş izni alamaz. Mevcut görevin bekleme/iptal tepkisi site prosedürü ve gerçek capability ile mevcut kontrol sahibinden yürütülür; gönderim ACK'i fiziksel duruş sayılmaz.
+4. Robot veya çıkış feedback'i kaybolduysa kaynak doluluğu belirsiz tutulur; lease/timeout kaynağı serbest bırakmaz. Yetkili operatöre son kanıtlar, belirsizlik ve gereken doğrulama aktarılır.
+5. Kontrol devri ve taze fiziksel durum doğrulandıktan sonra yetkili karar verilir: görev sonlandırma, onaylı manuel tamamlama veya yeniden yetkilendirilmiş devam. Operatörün mesajı aldım ACK'i, fiziksel gözlem/clearance kanıtı yerine geçmez.
+
+**Hata durumları:** operatöre ulaşılamaması veya feedback'in hâlâ eski/güvenilmez olması otomatik devam ya da kaynak bırakma gerekçesi değildir. Belgelenmemiş tekrar açma, motoru zorla sürme, interlock bypass'ı veya paralel robot komut sahibi devreye sokulmaz.
+
+**Başarı kriteri:** yetkisiz/tekrarlanan dispatch ve kanıtsız geçiş/kaynak bırakma oluşmadan hata kontrollü biçimde sonlandırılmış ya da açık operatör devrine alınmıştır. Teslimat ve fiziksel duruş/kapanma ayrıca kanıtlanmadıkça başarılı gösterilmez; yeniden devam için yeni geçerli karar ve gerekli taze durum bulunur.
+
+### UC-05 — Bağımsız tesis olayının teslimat akışına etkisi
+
+**Aktörler:** bağımsız `SourceListener`/tesis olay kaynağı, `FacilityAlarmResponse` politikası, etkilenen teslimat görevi/robot, mevcut `CommandOwner` ve tesis operatörü.
+
+**Önkoşullar:** güvenilir kaynak, zone/site eşlemesi, onaylı tesis prosedürü ve robotun bildirim/eylem capability'leri tanımlıdır. Alarmın Unloc'tan geldiği veya Unloc kapı erişiminin yangın alarmı kaynağı olduğu varsayılmaz; kaynak ayrı doğrulanır. Mevcut sabit alarm simülasyonu bu saha politikasının yerine geçmez.
+
+**Tetikleyici:** bağımsız kaynakta normalize edilen yangın alarmı/erişim kısıtlaması olayı veya aktif tesis durumu sırasında teslimat görevinin/robotun kapsama girmesi.
+
+**Ana akış:**
+
+1. Listener sıfır robot/görev varken de çalışır; olay veya güncel context, kaynak kalitesi ve aktivasyon kimliğiyle teslimat görevine ilişkilendirilir.
+2. Etkilenen bina/bölge ve görev için politika, yalnız bildirim veya desteklenen bekleme/iptal etkisini seçer. Bildirim `RobotEventPort`, eylem yetkili `RobotCommandPort` sınırından değerlendirilir; RMF/vendor owner varsa ikinci hareket yolu açılmaz.
+3. Bildirim teslimi ve komut ACK'i, robotun fiziksel tepkisinden ayrı kaydedilir; aynı aktivasyon/hedef/etki ikinci fiziksel komut üretmez. Kaynak ve geçiş doluluğu iptal kararıyla silinmez.
+4. Kaynak durumu, robot sonucu ve operatör gereksinimi izlenir. Alarmın temizlenmesi, kaynağın reconnect olması veya olayın loglanması kendiliğinden erişim/`Resume` üretmez; devam ayrıca yetki ve fiziksel durum uzlaştırması ister.
+
+**Hata durumları:** kaynak kaybı/`UNKNOWN`, eski boot/aktivasyondan clear veya güvenilmeyen olay yeni aktif alarmı temizlemez ve geçiş izni vermez. Desteklenmeyen bildirim/eylem başarılı sayılmaz; komut yeteneği yoksa sahte bekleme/iptal sonucu yerine açık sınır ve operatör ihtiyacı gösterilir.
+
+**Başarı kriteri:** etkilenmiş teslimat için prosedüre uygun, audit'li karar verilmiştir; izin verilmeyen/unsupported eylemlerin komut dispatch sayısı sıfırdır. Olay kaydı/ACK fiziksel sonuç yerine kullanılmaz, sonuç kanıtsızsa belirsizlik görünür kalır ve hiçbir clear/reconnect otomatik devam ettirmez.

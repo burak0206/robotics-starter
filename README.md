@@ -201,6 +201,12 @@ Bu faydalar ürün hedefleridir. İlk müşteri segmenti, pilot tesis ve gelir m
 
 Hedef cihazlar asansörler, otomatik/kartlı kapılar, erişim sistemleri, bariyerler, turnikeler, konveyörler, fiziksel trafik ışıkları ve yangın alarmı olaylarıdır. Yürüyen bant ve yürüyen merdivenler için izleme ve rota kısıtları değerlendirilebilir; robotun bunlara binebileceği varsayılmaz. Özel kart geliştirmek ilk kurulumun önkoşulu değildir; mevcut endüstriyel gateway/I/O ürünleri uygunsa değerlendirilebilir. Marka adından cihaz tipi veya protokol çıkarılmaz; her modelin komutları, geri bildirimleri ve güvenlik sınırları dokümantasyonla doğrulanmalıdır. Her cihazın bağlanabileceği taahhüt edilmez.
 
+### Unloc erişim adaptörü ve teslimat pilotu — planlanan
+
+Unloc, üreticiden bağımsız ve değiştirilebilir bir erişim adaptörü üzerinden değerlendirilmesi planlanan adaydır; repoda Unloc entegrasyonu yoktur. Hedef akışta teslimat robotunun kimliği, erişim izni ve aktif görevi kilit açma isteğinden önce doğrulanmalıdır. API kabulü veya mevcutsa erişim kaydı; kapının fiziksel açılmasını, robotun geçişini ya da çıkışını doğrulamaz, bunlar ayrı kanıtlar gerektirir. Unloc ile kilit açmanın otomatik kapı açıcıyla birlikte kullanımı kullanıcı tarafından aktarılmıştır; bu bildirim saha doğrulaması değildir.
+
+İlk Unloc pilot adayı bir robot, tek bina girişi ve tanımlı bir ortak teslimat alanıyla sınırlıdır; daire içine teslimat, asansör ve çok tesisli kullanım sonraki genişlemelerdir. Online cloud API yolu ağ bağlantısı gerektirir; Greengrass bu bağımlılığı kendiliğinden offline çalışmaya dönüştürmez. Cihaz/kontrolcü modeli, erişim kimlik bilgileri/yetkileri ve fiziksel geri bildirim yöntemi henüz belirlenmemiştir. Ayrıntılar [Unloc adaptör sınırında](docs/product-scope.md#unloc-access) ve [teslimat senaryosunda](docs/use-cases.md#unloc-delivery) tutulur.
+
 ### Planlanan yetenekler
 
 - **İlk ürünün temelleri:** Robot, kullanıcı, servis ve gateway kimlikleri; site/resource/task kapsamlı yetkilendirme; desteklenen bağlantılarda sertifika/mTLS; doğrulanmış cihaz durumu, hata yönetimi ve kalıcı audit. Yetkisiz istek fiziksel komut üretememeli; komut kabulü fiziksel sonuç olarak gösterilmemeli.
@@ -235,7 +241,7 @@ Bunlar hazır donanım ürünleri değildir. Önce uygun endüstriyel gateway/I/
 | --- | --- |
 | İlk teknik dikey dilim | Bir simüle robot + bir simüle kapı: kimlik → yetki → kapı komutu → doğrulanmış açık kapı → geçiş izni → robotun çıkış teyidi → audit |
 | Ortak kaynak koordinasyonu | İki robot, iki kat, bir asansör ve bir kapı; kimlikli rezervasyon, bekleme ve doğrulanmış çıkıştan sonra kaynak bırakma |
-| Hedef ticari pilot | Bir gerçek tesis, bir robot modeli, bir asansör, bir kontrollü kapı ve iki kat arasında tekrarlanan tek bir müşteri görevi; kapsam sahadaki belgelenmiş arayüzlere göre seçilmeli |
+| Sonraki ticari pilot hedefi | Bir gerçek tesis, bir robot modeli, bir asansör, bir kontrollü kapı ve iki kat arasında tekrarlanan tek bir müşteri görevi; kapsam sahadaki belgelenmiş arayüzlere göre seçilmeli |
 | Ürünleşme | Sonraki kurulumlarda daha az özel mühendislik, daha fazla adaptör/yapılandırma yeniden kullanımı; kurulu taban büyüdükçe çoklu üretici ve çok tesisli operasyon |
 
 Pilotlarda insansız tamamlanan görev oranı, her 100 görevde müdahale sayısı ve süresi, kapı/asansör bekleme süreleri, kurulum mühendislik zamanı ve sonraki kurulumdaki yeniden kullanım ölçülmek istenir. İlk saha çalışması işlevi, sonraki kurulumlarda azalan iş yükü ürünleşme potansiyelini gösterecektir. Henüz ölçülmüş ticari başarı veya sayısal hedef iddiası yoktur.
@@ -447,6 +453,12 @@ These benefits are product goals. The first customer segment, pilot site, and re
 
 Target equipment includes elevators, automatic/card-controlled doors, access systems, barriers, turnstiles, conveyors, physical traffic lights, and fire alarm events. Monitoring and route constraints may be evaluated for moving walkways and escalators; robots must not be assumed capable of boarding them. A custom circuit board is not a prerequisite for the first installation; existing industrial gateways and I/O products may be evaluated where suitable. Device type or protocol must not be inferred from a brand name. Commands, feedback, and safety boundaries must be verified for each model from its documentation. Support for every device is not promised.
 
+### Unloc access adapter and delivery pilot — planned
+
+Unloc is a candidate for a planned vendor-independent, interchangeable access adapter; this repository has no Unloc integration. In the intended flow, the delivery robot's identity, access permission, and active task must be validated before requesting an unlock. An API acknowledgement or access log, where available, does not confirm physical door opening, robot passage, or exit; these require separate evidence. The user has reported a setup pairing Unloc unlocking with an automatic door opener; that report is not field verification.
+
+The initial Unloc pilot candidate is limited to one robot, one building entrance, and a defined common delivery area; delivery inside apartments, elevators, and multi-site operation are later extensions. The online cloud API path requires network connectivity; Greengrass does not automatically turn that dependency into offline operation. The device/controller model, access credentials and permissions, and physical feedback method remain unspecified. Details belong in the [Unloc adapter boundary](docs/product-scope.md#unloc-access) and [delivery scenario](docs/use-cases.md#unloc-delivery).
+
 ### Planned capabilities
 
 - **First-product foundations:** Separate robot, user, service, and gateway identities; site/resource/task-scoped authorization; certificates/mTLS on supported connections; confirmed device state, failure handling, and durable audit. Unauthorized requests must not produce physical commands, and command acceptance must not be presented as a confirmed physical result.
@@ -481,7 +493,7 @@ These are not ready-made hardware products. Suitable industrial gateway/I/O opti
 | --- | --- |
 | First technical vertical slice | One simulated robot and one simulated door: identity → authorization → door command → confirmed open door → passage grant → robot exit confirmation → audit |
 | Shared-resource coordination | Two robots, two floors, one elevator, and one door; identity-bound reservations, waiting, and resource release after confirmed exit |
-| Target commercial pilot | One real site, one robot model, one elevator, one controlled door, and a single repeated customer task across two floors; scope must follow the site's documented interfaces |
+| Later commercial pilot target | One real site, one robot model, one elevator, one controlled door, and a single repeated customer task across two floors; scope must follow the site's documented interfaces |
 | Productization | Less custom engineering and more reusable adapters/configuration in subsequent installations; multi-manufacturer and multi-site operations as the installed base grows |
 
 Pilot measurements should include the proportion of tasks completed without human intervention, intervention count and duration per 100 tasks, door/elevator waiting times, installation engineering time, and reuse in subsequent installations. The first field deployment should demonstrate functionality; reduced effort in subsequent deployments should demonstrate productization potential. No measured commercial success or numerical target is claimed yet.

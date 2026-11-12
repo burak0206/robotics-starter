@@ -4,6 +4,8 @@
 
 Kapsam güncellemesi: **2026-11-11**. Tesis olay listener'ları, ayrı bildirim/komut yolları, genişletilmiş ekipman türleri ve profil tabanlı devreye alma aşağıda `PLANNED` olarak tanımlanmıştır; uygulama desteği eklenmemiştir. Önceki protokol sürüm araştırmasının tarihi yukarıdaki inceleme tarihidir; yeni donanım adaylarının kaynak tarihleri kendi satırlarında belirtilir.
 
+Unloc kapsam incelemesi: **2026-11-12**. Resmî API belgeleri, kullanıcı gözlemi, hedef binada doğrulanacak yetenekler ve repodaki durum [Unloc erişim profili](#unloc-access) altında ayrı gösterilir. Uygulama, test, bağımlılık veya deployment değişikliği yoktur; gerçek kapı/anahtar/webhook işlemi ve dış taraflarla iletişim yapılmamıştır.
+
 Bu belge ürün kapsamı, hedef mimari, entegrasyon sınırları ve kabul kriterlerinin tek referansıdır. **Uygulanan özellik listesi değildir.** Bu görevde uygulama kodu, framework, protokol sözleşmesi veya bağımlılık değiştirilmemiştir. Repo ve üst dizinlerde `AGENTS.md` bulunmamıştır.
 
 - [README](../README.md): mevcut projeyi çalıştırma ve doğrulama.
@@ -380,6 +382,7 @@ Bu bölümdeki kaynaklar **2026-11-10 tarihinde incelenmiş referanslardır**. S
 | Endüstriyel konveyör | Robotla yük teslim alma/verme ve transfer handshake | Yön, hazır/meşgul/başladı/tamamlandı anlamları, yük/robot hizası ve ayrı transfer/clearance feedback | `PLANNED`; üretici bit/register veya pulse süresi seçilmedi |
 | Fiziksel trafik ışığı | Ortak geçiş için gösterge/control state | Lamba değil kontrolcünün modeli, renk/izin anlamı, feedback ve bağlantı kaybı davranışı | `PLANNED` |
 | Yangın alarmı olayları | Güvenilir olayın site prosedürüne göre görevlere etkisi | Panel/model, olay arayüzü, zone mapping, source trust ve onaylı prosedür | Sabit demo politikası `SIMULATED`; gerçek panel yok |
+| Unloc erişim sistemi | Teslimat robotu için yetkili online lock operation adayı; fiziksel kapı doğrulaması ayrı | Bina/kilit/kontrolcü, bağlantı tipi, project/module yetkisi, motor ve feedback; [ayrıntılı durum matrisi](#unloc-access) | `PLANNED`; Unloc adapter'ı veya Unloc-specific simulator yok |
 | Eaton adayı | Belgelenmiş rolüne göre PLC/akıllı röle/I/O veya başka kontrolcü | **Tam model/part number ve firmware olmadan cihaz tipi/protokol seçilmez**; lisans ve wiring manual gerekir | `PLANNED / ModelUnknown` |
 | Bosch AVENAR adayı | Belgelenmiş FSI/OPC/BACnet seçeneklerinden uygun olay/durum listener'ı | Panel/model/firmware, ilgili server/SDK ve lisanslar; BACnet server V1.0 belgesi read-only yönü gösterir | `PLANNED / ModelProfilePending`; panel kontrolü veya alarm reset desteği iddia edilmez |
 | Advantech ADAM-6266 adayı | Üretici sayfasındaki dijital giriş/röle çıkışı ve network arayüzü üzerinden field gateway | Hardware/firmware, giriş/çıkış semantiği, izinli write, feedback sensörü ve transport security profili | `PLANNED / ModelProfilePending`; repo adapter'ı ve saha uygunluk kanıtı yok |
@@ -392,6 +395,108 @@ Bir cihazın açma çıkışını sürmek, açık sensörü okuyabildiğimiz anl
 **2026-11-11 tarihli aday kaynak kontrolü:** [Bosch'un resmî AVENAR ürün sayfası](https://www.boschbuildingtechnologies.com/lifesafetysystems/en/products/fire-alarm-control-panels/), sisteme göre FSI server, OPC veya BACnet server seçeneklerini belirtir; her panelde aynı native API olduğu çıkarılamaz. [16 Ocak 2025 tarihli BACnet server V1.0 teknik bilgisi](https://media.boschsecurity.com/fs/media/pb/media/extranet/fire_alarm_system/tech_info_en/2624_2024_TI_EN_AVENAR_BACnet_server_V1.0.pdf) belirli firmware/RPS/OS/lisans profili tarif eder ve o sürümde BMS'den panele komut göndermeyi desteklemez. Dolayısıyla bu belge kontrol değil **read-only alarm/state listener adayı** için kanıttır; en yeni saha BOM'u seçimi değildir.
 
 [Advantech'in resmî ADAM-6266 model sayfası](https://www.advantech.com/en-us/products/7447e150-338d-402d-b5a1-c9ce6d98816e/adam-6266/mod_b239f2aa-3498-4ac2-8ecb-e6c7b319f903), 4 dijital giriş + 4 röle çıkışı ve MQTT(TLS), Modbus TCP, RESTful arayüzlerini listeler. Bu model bilgisi entegrasyon sınıfına örnektir; güvenli kapı kontrolü veya doğru alarm-kablo gözetimi kanıtı değildir. MQTT(TLS) desteğinden REST mTLS veya bütün protokollerde TLS sonucu çıkarılmaz. Her iki aday için de erişim bilgisi, register/sinyal mapping ve elektriksel saha profili henüz seçilmemiştir.
+
+<a id="unloc-access"></a>
+
+### Unloc: teslimat robotları için değiştirilebilir erişim profili — `PLANNED`
+
+Amaç, Unloc kullanılan bir binada farklı marka teslimat robotlarının **yetkili girişini, ortak teslimat alanına ulaşmasını ve doğrulanmış çıkışını** koordine etmektir. Robot firması/entegratör için bina başına özel entegrasyon işini; tesis için rutin kapı açma ve robotu geçirme müdahalesini azaltmak hedeflenir. Bu faydalar henüz pilotla ölçülmemiştir.
+
+`UnlocAccessAdapter`, mevcut hedef mimarideki `BuildingResourcePort` arkasında değiştirilebilir bir dış adaptör adayıdır. Robot kimliği, görev, policy, rezervasyon, audit, motion owner veya domain modeli Unloc SDK/kimliklerine bağımlı yapılmaz. Başka erişim kontrolcüsüne geçmek domain akışının yeniden yazılmasını gerektirmemelidir. **Repoda Unloc kodu veya çalışan Unloc entegrasyon kanıtı yoktur.**
+
+Envanterde platformun `DoorResource` kaydı, `SiteDeviceBinding` üzerinden onaylı Unloc organization/project/lock referansına ve doğrulanacak profil sürümüne bağlanır. Provider'da görünür olmak robot erişim izni değildir; proje içindeki bütün kilitler otomatik olarak robot kullanımına açılmaz. Fiziksel kontrolcü/kilit/motor modeli ve feedback kaynağı bu eşlemeden bağımsız saha bilgisi olarak doğrulanır.
+
+#### Kullanıcı gözlemi ile saha kanıtının ayrımı
+
+**Kullanıcı tarafından bildirilen gözlem:** Bina girişinde Unloc kullanılıyor; Unloc üzerinden işlem yapıldığında kilit çözülüyor ve mevcut kapı açıcı motor kapı kanadını otomatik açıyor. Bu gözlem teknik saha doğrulaması değildir. İşlemin telefon/Bluetooth, online bağlantı veya hangi entegrasyon yoluyla gerçekleştiği bilinmiyor; headless API işleminin aynı motor davranışını tetiklediği çıkarılamaz.
+
+Kontrolcü/kilit marka-modeli, firmware, bağlantı türü, API erişimi/modül aktivasyonu, fiziksel açık/kapalı ve lock-state feedback, açık tutma, passage detection ve yeniden kilitlenme yetenekleri henüz doğrulanmamıştır. Bina yönetimi, Unloc ve bakım/kapı otomasyonu tarafının vereceği yetkiler de bilinmiyor. Bu alanlar `SiteDeviceBinding` içinde tahminle doldurulmaz.
+
+#### Resmî kaynaklarla doğrulanan kapsam
+
+Aşağıdaki bilgiler **2026-11-12 tarihinde erişilen resmî belgeler** hakkındadır; hedef binanın bu özelliklere sahip olduğunu veya repo adaptörünün uygulandığını göstermez.
+
+- **Başlangıç ve kimlik:** Version 2 dokümantasyonu Organization API credentials ile entegrasyon tarif eder. OAuth 2 `client_credentials` üzerinden scoped JWT Bearer token; `organization.admin` ve `project.admin` gibi kapsamlar belgelenmiştir. Yetkili project/kaynak kapsamı ayrıca belirlenir. Bu, her binanın bütün kilitlerine erişim veya robot için bir kimlik değildir; Unloc tarafında mTLS doğrulandığı anlamına da gelmez. [API başlangıç](https://developer.unloc.app/reference/getting-started), [Authentication](https://developer.unloc.app/reference/authentication-doc).
+- **Mobil anahtar ve doğrudan kilit işlemi farklı yeteneklerdir:** Anahtar yönetimi Unloc uygulamasında kullanılacak, telefon numarasıyla tanımlanan kullanıcı akışını açıklar. Mobil anahtar oluşturabilmek; robotun insan/telefon uygulaması olmadan anahtar kullanabildiğini veya doğrudan kilit açabildiğini kanıtlamaz. İlk pilot için robot adına mobil anahtar oluşturma varsayılmıyor. [Managing Keys](https://developer.unloc.app/reference/managing-keys).
+- **Doğrudan online işlem:** Online/IP lock rehberi internet bağlantılı kilitler için API açmayı anlatır ve üründe kullanım için Unloc ile iletişim kurulmasını ister. `Operate Lock` referansı Key oluşturmadan `unlock`/`lock` işlemlerini, `project.admin` kapsamını ve etkin `operateLockApi` modülünü belgeler. Online rehber bu API yolunun Bluetooth kilitlerde çalışmadığını açıkça belirtir; başka bir telefonsuz Bluetooth robot entegrasyonu doğrulanmış değildir. Yanıt vendor operation confirmation sonrasında gelir; bu kapı kanadının açılması veya robot geçişi değildir. Hedef binada kullanılabilirlik ayrı doğrulanacaktır. [Opening Online Locks](https://developer.unloc.app/docs/opening-ip-locks-with-api), [Operate Lock](https://developer.unloc.app/reference/operatelock).
+- **Doğrudan API işlemi ve kayıt:** `Operate Lock`, işlemin API credential actor ve isteğe bağlı `externalReference` ile Access Event olarak kaydedildiğini belirtir. Credential actor robot kimliğinin yerine geçmez; platform kendi robot/task/command korelasyonunu tutar. `externalReference` traceability içindir; belgelenmiş idempotency/deduplication garantisi sayılmaz. [Operate Lock](https://developer.unloc.app/reference/operatelock).
+- **Erişim olayları ve gizlilik:** `unlocked`, `locked`, `viewedCode` olayları belgelenmiştir. Public/Anonymized/Private politikaları görünürlüğü etkiler; Private olay API'de görünmez, anonymized kayıttan kullanıcı kimliği varsayılmaz. Güncel Access Log reference son 60 gün için sorgu ve `project.admin` kapsamı tarif eder. Logun bulunmaması kapının kullanılmadığı veya alanın boş olduğu kanıtı değildir. Platform kendi yetkili audit'ini, veri minimizasyonu ve site izinleriyle tutar. [Access Log and Privacy Policy](https://developer.unloc.app/docs/key-events-and-privacy-policy), [Get Access Log](https://developer.unloc.app/reference/getaccesslog).
+- **Webhook kaydı ve teslim sınırı:** Registration reference `project.admin`, path/JWT project eşleşmesi, `url`, `trigger: accessEvent` ve isteğe bağlı `lockId` açıklar; `lockId` verilmezse proje kilitleri kapsanır. Rehber HTTPS ve isteğe bağlı Basic authentication tarif eder. Rehberin belgelenen kapsamı, entegratörün oluşturduğu mobil anahtarların AppUser akışındaki `locked`/`unlocked` olaylarıdır; uygulamadan paylaşılan anahtarlar kapsam dışındadır. Uygulama offline ise olay gecikmeli bildirilebilir. Bu açıklama doğrudan API işlemleri veya bütün bağlantı tipleri için teslim garantisi değildir. [Register a new Webhook](https://developer.unloc.app/reference/registerwebhook), [Webhooks](https://developer.unloc.app/docs/webhooks-guide).
+
+**Belgeler arasındaki açık noktalar:** Webhook rehberindeki kayıt alanı notu (`webhookUrl`) ile güncel registration reference (`url`/`trigger`) aynı değildir; eski rehber 30 günlük log kapsamı derken güncel Access Log reference 60 gün der. Tasarımda güncel reference esas alınır, ancak implementation öncesi geçerli contract/retention Unloc ile doğrulanmalıdır; eski örnek kopyalanmaz. Erişim privacy politikalarının webhook görünürlüğüne tam etkisi, doğrudan API operation Access Event'inin webhook teslim kapsamı/payload'ı, imza/HMAC, retry takvimi, ordering ve duplicate delivery garantileri okunan kaynaklardan kesinleşmemiştir. Bunlar **doğrulanacak**; mobil-key örneğindeki `keyId`/`appUserId` alanlarının direct operation'da bulunacağı varsayılmaz. Bu görevde webhook kaydı veya dış iletişim yapılmadı.
+
+Unloc webhook'u/erişim kaydı `FacilityEventSourcePort` için yalnızca yetkili bir **access-operation observation** adayıdır. `DoorOpened`, `DoorwayCleared`, robot exit veya alarm kaynağı olarak yeniden etiketlenmez. Callback kimliği ve güvenilirliği yalnız belgelenmiş yöntemlerle doğrulanır; var olmayan signature/header sözleşmesi uydurulmaz. Gecikmiş webhook, eksik log veya local receive time geçiş izni kanıtı olamaz. Yangın kaynağı [ayrı tesis listener hattındadır](#facility-event-pipeline).
+
+#### Entegrasyon durum matrisi: birbirinden bağımsız kanıtlar
+
+`Resmî belgede mevcut`, yalnız vendor dokümanındaki yeteneği ifade eder. `Hedef binada doğrulanacak` saha koşuludur; `PLANNED` ürün kararıdır. `Simüle edilmiş` ve `repoda uygulanmış` ise ayrı kod kanıtlarıdır. Bir sütundaki olumlu bilgi diğer sütunlara taşınmaz.
+
+| Yetenek | Resmî belgede durum | Hedef bina | Ürün planı | Repo simülasyonu | Repoda uygulanmış |
+| --- | --- | --- | --- | --- | --- |
+| Organization credentials / scoped JWT | Mevcut; kaynak yetkileri ayrıca sınırlı | Credential/project/site yetkisi doğrulanacak | `PLANNED` dış adapter kimliği | Yok | Hayır |
+| Mobil anahtar oluşturma/kullanma | Uygulama/telefon kullanıcı akışı mevcut | Robotun telefonsuz kullanımı doğrulanmış değil | Robot anahtarı ilk pilot varsayımı değil | Yok | Hayır |
+| Online lock direct `unlock` | Mevcut; `project.admin` + etkin `operateLockApi`; ürün kullanımı Unloc ile görüşülecek | Kilit online mı, module/izin uygun mu doğrulanacak | `PLANNED`, go/no-go koşullu | Unloc-specific yok | Hayır |
+| Aynı direct operation'ı Bluetooth kilitte kullanma | Online rehber bu yolun Bluetooth kilitlerde çalışmadığını belirtir | Bağlantı tipi bilinmiyor | Bu online yol seçilmez; başka Bluetooth yolu doğrulanmadı | Yok | Hayır |
+| Direct operation Access Event | Credential actor + optional reference belgelenmiş | Project/visibility/correlation doğrulanacak | Yardımcı audit observation adayı | Yok | Hayır |
+| Access Event webhook kaydı | Registration ve dar guide kapsamı mevcut | Callback/ağ/izin/privacy doğrulanacak | `PLANNED`, opsiyonel observation | Yok | Hayır |
+| Direct operation için webhook teslimi | Açık kapsam/payload garantisi doğrulanmadı | Unloc ile doğrulanacak | Kesin bağımlılık yapılmaz | Yok | Hayır |
+| API → kilit → motor → açık kapı | Fiziksel kanat/motor sonucu belgelerden çıkarılamaz | Kullanıcı gözlemi var; API zinciri saha testinde doğrulanacak | Gerekli feedback profiline bağlı | Yalnız genel kapı state demo'su | Unloc entegrasyonu hayır |
+| Açık tutma, passage detection, relock feedback | Bu kurulum için doğrulanmadı | Arayüz/sinyal ve fiziksel davranış bilinmiyor | Profil/onay sonrası kapsam seçilir | Unloc-specific yok | Hayır |
+| UC-01…UC-05 delivery orchestration | Platform tasarımı; vendor özelliği değildir | Pilot önkoşulları henüz geçilmedi | `PLANNED` | Unloc-specific robot/teslimat simülatörü yok | Hayır |
+| Mevcut `DoorSimulator` | Unloc yeteneği değildir | Saha kanıtı değildir | Mevcut demo korunur | Evet, generic kapı state akışı | Evet, yalnız generic simulator |
+
+#### Sorumluluklar ve komut sahipliği
+
+| Bileşen | Sorumluluk | Üstlenmediği sonuç |
+| --- | --- | --- |
+| Platform | `RobotPrincipal`, aktif delivery/task/time window, site/door policy, kaynak grant'i, geçiş/exit adımları, timeout/handoff ve audit | Vendor credential yetkisini robotun teslimat yetkisi saymaz; fiziksel sonucu ACK'ten çıkarmaz |
+| `UnlocAccessAdapter` / Unloc | Onaylı API profile'ındaki lock operation ve izinli operation/event verisi; belgelenmiş credential/project/module sınırı | Otomatik robot navigasyonu, motorlu kapı açılışı, geçiş/clearance veya asansör koordinasyonu garanti etmez |
+| Kapı kontrolcüsü, kilit, motor ve sensörler | Fiziksel açma davranışı, aperture/obstruction/door/lock feedback ve kendi koruma fonksiyonları | Unloc operation veya relay ACK'i otomatik fiziksel kapı kanıtı yapmaz |
+| Robot / vendor fleet manager | Capability'lerin desteklediği hedef/hareket/task durumları, lokal navigasyon ve clearance kanıtı | Erişim sisteminin açılması robotun yürüdüğünü veya çıktığını kanıtlamaz |
+| Mevcut atanmış motion owner | Seçilen `PLATFORM_MANAGED`, RMF veya vendor fleet profile'ında tek hareket yolu | Unloc adaptörü ikinci motion writer veya ROS publisher olmaz |
+
+Kavramsal istek yolu: `DeliveryTaskCoordinator → AccessPolicy → EdgeCommandArbiter → BuildingResourcePort → UnlocAccessAdapter → documented online operation`. Ayrı doğrulama yolu: onaylı kapı/controller/sensör veya robot gözlem profili → taze fiziksel geçiş kanıtı → permission/ilerleme → çıkış kanıtı. İsimler hedef domain sınırlarıdır; mevcut endpoint/implementasyon değildir. Platform command dispatch'inden hemen önce robot kimliğini, aktif teslimatı, izinli kapıyı, zaman aralığını ve authority'yi tekrar doğrular. Cancel/expiry sonrası yeni unlock intent reddedilir; provider tarafından desteklenen mobil key scheduling'e bağımlı değildir.
+
+#### İlk pilot ve saha önkoşulları
+
+**İlk Unloc pilot adayı: tek robot, tek bina girişi, izinli ortak teslimat alanı ve ayrı doğrulanan çıkış.** Daire içi teslimat, asansör, çoklu kapı/kat veya çoklu bina bu pilotun zorunlu kapsamı değildir. Bunlar UC-03/sonraki deployment'lara aittir. Bu aday genel ürün vizyonunu Unloc'a indirgemez; önceki geniş pilot/çoklu robot hedefleri sonraki aşama olarak kalır.
+
+İlk go/no-go bağımlılığı: **hedef girişin gerçek kilit/kontrolcü ve bağlantı profilinde, bina ve Unloc tarafından yetkilendirilmiş doğrudan online API işlemi kullanılabiliyor mu?** Model/firmware, online-IP/Bluetooth yolu, project/lock scope, ürün kullanım koşulları/onayları ve `operateLockApi` doğrulanmadan headless API robot pilotu destekleniyor denmez. Bu yol uygun değilse insan telefonu veya Bluetooth robot SDK'sı uydurmak yerine alternatif belgelenmiş adapter yolu değerlendirilir; pilot yeniden kapsamlanır.
+
+Ardından yetkili saha commissioning'i şu zinciri ayrı ayrı doğrular: API/vendor lock result → kilidin çözülmesi → motorun tetiklenmesi → kapı kanadının yeterli açıklığı/açık kalma koşulu → robot/yük geçişi → exit/clearance → gereken kapanma/yeniden kilitlenme koşulları. Son iki koşulun sorumlusu ve doğrulama kaynağı profil/prosedürde belirtilir; bilinmeyen lock state başarılı post-condition olarak gösterilmez. Mevcut kapı otomasyonu ve feedback yeterliyse ek donanım gerekmeyebilir; eksikse sensör/gateway/bağlantı ihtiyacı saha incelemesiyle seçilir, keyfî röle eklenmez.
+
+UC-01…UC-05 için aktörler, tetikleyiciler, akış, hata ve başarı koşulları [Unloc teslimat senaryolarında](use-cases.md#unloc-delivery) yer alır. Bu görevde saha testi, API operation, credential isteme, anahtar oluşturma veya dış taraflarla görüşme yapılmamıştır.
+
+#### Edge/cloud, kimlik ve bağlantı kesintileri
+
+Mevcut repo yerel Compose/HTTP/gRPC demo süreçleridir; hazır production cloud veya on-premise deployment olduğu iddia edilmez. Hedef tasarımda geçişin task/policy/observation yürütmesi saha edge runtime'ında; inventory/config/audit yönetimi onaylı cloud veya müşteri on-premise control-plane profilinde yer alabilir. Aynı modüller korunur, bu görev yeni servis veya deployment yapılandırması kurmaz.
+
+Unloc online operation yine Unloc bulutuna gerekli network erişimini ister. Local gateway veya Greengrass bu işlemi **kendiliğinden offline yapmaz**; local policy geçerli olsa bile gerekli provider bağlantısı yoksa yeni online unlock dispatch edilmez. Webhook gerekiyorsa belgelenen HTTPS callback için onaylı ingress/firewall/proxy yolu ayrıca tasarlanır; edge'in public erişilebilir olduğu varsayılmaz. Merkezi callback receiver ile edge'e olay iletimi de yalnız planlanan bir seçenek, mevcut altyapı değildir.
+
+`RobotPrincipal`/`UserPrincipal` ile Unloc `client_id`/`client_secret`, JWT ve callback kimliği ayrıdır. Secret reference, sınırlı project/building/lock allowlist, gerekli scope, erişim süresi/rotation ve tenant/site binding mevcut [kimlik yaklaşımına](#7-kimlik-politika-ve-audit) göre tasarlanır. Provider'daki `project.admin`, robotun bütün kilitleri kullanmasına izin değildir. Credential robot uygulamasına veya README/audit'e gömülmez; operator/body'den gelen serbest lock ID'si server-side allowlist'i aşamaz. Unloc tarafında belgelenmemiş mTLS desteği iddia edilmez.
+
+| Hata | Planlanan davranış |
+| --- | --- |
+| Yetkisiz/iptal/expired delivery veya kapsam dışı kapı | Provider adapter dispatch sıfır; red kararı ve actor/task/resource audit'i |
+| API/module/credential/network hatası, dispatch öncesi | Fiziksel başarı yok; izinli bekleme/deadline/handoff. Expired intent reconnect'te tekrar oynatılmaz |
+| İstek gönderildi, sonuç/ACK kayıp | `OUTCOME_UNKNOWN`; `externalReference` veya yeni command ID ile kör retry yok. Yalnız belgelenmiş sorgu ve fiziksel kanıtla uzlaştırma veya operatör |
+| Vendor lock operation onaylı, kapı açılmadı/engel var | Robot ilerlemez; physical feedback/state deadline ve site prosedürü. Motor/hold-open veya lock komutu uydurulmaz |
+| Webhook/log gecikmiş, private veya görünmüyor | Gap/freshness/privacy sınırı görünür; `DoorOpen`, exit, alan boş veya yeni unlock gereği çıkarılmaz |
+| Robot iletişimi/exit teyidi kayıp | Occupancy `UNCONFIRMED`; lease expiry/restart kaynak release kanıtı değildir. Manuel verified clearance ve audit gerekebilir |
+| Yangın/erişim kısıtlaması | Bağımsız facility event kaynağı + onaylı `SiteEmergencyPolicy`; evrensel kapı aç/kapat veya olduğu yerde dur kuralı yok. Clear otomatik resume değildir |
+
+#### Açık saha ve entegrasyon soruları
+
+1. Girişin kontrolcüsü, kilidi, kapı motoru ve sensörlerinin tam model/firmware'i ve sorumlu bakım firmaları kim?
+2. Kullanıcı gözlemindeki akış online/IP mi, Bluetooth/telefon akışı mı; bu kilitte direct online operation gerçekten kullanılabilir mi?
+3. Bina yönetimi ve Unloc hangi Organization/project/lock yetkilerini, ürün kullanım koşullarını/onaylarını ve `operateLockApi` erişimini sağlayacak?
+4. Direct operation motoru tetikliyor mu; açık/kapalı ve lock-state hangi arayüzden, hangi freshness/correlation ile okunuyor?
+5. Açık tutma, engel, robot/yük passage algılama, exit ve yeniden kilitlenme nasıl doğrulanıyor; çıkış yolu ayrıca unlock istiyor mu?
+6. Direct API Access Event'in webhook kapsamı/payload'ı, privacy filtreleri, retention, teslim gecikmesi, imza/Basic auth, retry/order ve event kimliği contract'ı nedir?
+7. Edge/provider ve varsa callback network erişimi için DNS/proxy/firewall kuralları ne; kesintide onaylı holding point ve operatör devri kimde?
+8. Ortak delivery area, rota/no-go constraints, tek motion owner ve bağımsız yangın/erişim kısıtlama prosedürleri nasıl onaylanacak?
+
+Bu sorular kod yazarak veya mevcut motor gözleminden sonuç çıkararak kapatılamaz. Pilot için ilk bağımlılık API uygunluğu ve bina bazlı yetkilendirmedir; fiziksel zincirin kontrollü saha doğrulaması ayrı bir sonraki kapıdır.
 
 ## 11. AWS IoT Greengrass V2 dağıtım adaptörü
 

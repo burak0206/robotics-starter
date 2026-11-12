@@ -9,7 +9,7 @@ Mevcut web arayüzü operatörün senaryoyu izlemesini ve simülasyonu denemesin
 | Bölüm | Destek durumu | Ne ifade eder? |
 | --- | --- | --- |
 | Aşağıdaki asansör, kapı ve sabit alarm iptal akışları | `SIMULATED` | Kodda çalışan, elle ilerletilen üç case; bu bölümlerdeki REST uçları mevcuttur |
-| Planlanan tesis alarmı, erişim geçişi, yürüyen yol/merdiven, konveyör ve devreye alma case'leri | `PLANNED` | Hedef davranış ve kabul koşulları; adaptör, yeni API veya saha desteği henüz yoktur |
+| Planlanan tesis alarmı, erişim geçişi, yürüyen yol/merdiven, konveyör, devreye alma, Unloc teslimatı ve acil durum tatbikatı case'leri | `PLANNED` | Hedef davranış ve kabul koşulları; adaptör, yeni API veya saha desteği henüz yoktur |
 
 Hiçbir case bu belgeyle `FIELD_VERIFIED` sayılmaz. Mevcut üç simülasyonun aşağıdaki durum/API sözleşmeleri korunur; yeni case'ler en sondaki plan bölümündedir.
 
@@ -129,6 +129,7 @@ Bu bölümdeki İngilizce case ve olay adları **dokümantasyon kimlikleridir**;
 | `MovingWalkwayEscalator` | Ekipman durumunu izle, desteklenmeyen geçişi rotadan çıkar | Başlangıç kapsamı izleme ve rota dışlama; robotun binmesi varsayılan olarak `UNSUPPORTED` |
 | `ConveyorTransfer` | Robot–endüstriyel konveyör yük aktarımını eşgüdümle | El sıkışması ve sensör kanıtı gerekir; üretici register'ı varsayılmaz |
 | `SiteCommissioning` | Kurulum profilini kur, test et ve onaylı sürüm olarak yayımla | Cihaz/robot yetenekleri kanıtlanır; serbest güvenlik kuralı editörü değildir |
+| [`EmergencyCoordinationDrill`](#emergency-drill) | İki robot/bölgede alarm, geçiş kısıtı ve bağlantı kaybını birlikte değerlendir | Yalnız planlanan tatbikat; mevcut sabit alarm demo'su veya gerçek afet uygunluğu değildir |
 
 ### `FacilityAlarmResponse`: bağımsız kaynak, tesis politikası, robot tepkisi
 
@@ -292,3 +293,31 @@ Bu case'ler dokümantasyon tasarımıdır; mevcut üç simülasyona Unloc adapt�
 **Hata durumları:** kaynak kaybı/`UNKNOWN`, eski boot/aktivasyondan clear veya güvenilmeyen olay yeni aktif alarmı temizlemez ve geçiş izni vermez. Desteklenmeyen bildirim/eylem başarılı sayılmaz; komut yeteneği yoksa sahte bekleme/iptal sonucu yerine açık sınır ve operatör ihtiyacı gösterilir.
 
 **Başarı kriteri:** etkilenmiş teslimat için prosedüre uygun, audit'li karar verilmiştir; izin verilmeyen/unsupported eylemlerin komut dispatch sayısı sıfırdır. Olay kaydı/ACK fiziksel sonuç yerine kullanılmaz, sonuç kanıtsızsa belirsizlik görünür kalır ve hiçbir clear/reconnect otomatik devam ettirmez.
+
+<a id="emergency-drill"></a>
+
+## `EmergencyCoordinationDrill`: iki robotlu acil durum tatbikatı — `PLANNED`
+
+Bu, ilk teknik tatbikat adayıdır; **bu görevde simülatör, test veya uygulama eklenmemiştir**. Mevcut elle ilerletilen sabit alarm demo'sunun bu senaryoyu çalıştırdığı iddia edilmez. Ürün/sorumluluk/AI sınırları [acil durum robot koordinasyonu](product-scope.md#emergency-robot-coordination) bölümünde tutulur; olay ve tepki hattı mevcut `FacilityAlarmResponse` akışıdır. Gerçek afette kullanılabilirlik veya bir robotun tehlikeli ortama uygunluğu simülasyon sonucundan çıkarılamaz.
+
+**Aktörler:** tatbikat operatörü, simüle tesis olay kaynağı/listener, platform görev/erişim/kaynak koordinasyonu, iki simüle robot ve mevcut tekil `CommandOwner`'ları, yetkili tesis olay sorumlusu.
+
+**Önkoşullar:** tek test tesisinde `zone-a` ve `zone-b`, ortak `passage-01`, iki robotun görev/rezervasyonları ve farklı bildirim/eylem capability'leri tanımlıdır. Robot A yaklaşma noktasındadır; robot B'nin son doğrulanmış konumu geçiş kaynağındadır ve çıkışı henüz teyit edilmemiştir. Alarmın etkilediği bölge, destekli tepkiler, onaylı bekleme/devralma ve normale dönüş koşulları açıkça `DemoSiteProcedure` fixture'ıdır; saha prosedürü değildir. Kontrollü saat ve source/robot feedback fixture'ları planlanır; gerçek erişim adaptörüne komut gönderilmez.
+
+**Tetikleyici:** normal simüle görevler sürerken bir alarm aktivasyonu, ortak geçişin kullanılamaz hale gelmesi ve robot B bağlantısının kaybı enjekte edilir. Geçiş kısıtı test verisidir; robot eşikteyken kapıyı fiziksel kapatma talimatı değildir.
+
+**Ana akış:**
+
+1. Listener alarmı kaynak/aktivasyon/bölge/zaman/kalitesiyle kaydeder. Platform etkilenen robot, görev, queued hedef ve kaynakları mevcut sürümlü harita/politikayla ilişkilendirir; kaynak kaybını alarm clear saymaz.
+2. Test prosedürüne göre kısıtlanan bölge/geçişe yeni normal admission ve eski rotaya bağlı queued hedef dispatch'i kapanır. Devam eden görevde hangi destekli etkinin seçildiği ayrıca kaydedilir; bütün robotlara aynı dur/hareket talimatı verilmez.
+3. Robot A için prosedürün seçtiği destekli tepki mevcut kontrol sahibinden istenir. Olay gönderimi, receipt/command ACK ve ayrı simüle davranış feedback'i ayrı ilerletilir; ACK olup sonuç gelmeyen varyant da denenir.
+4. Robot B'nin bağlantısı/telemetrisi ve çıkış kanıtı kaybolur. Son konum zamanıyla gösterilir; güncel konum/duruş uydurulmaz. Sonuç belirsiz, geçiş doluluğu `UNCONFIRMED` ve operatör ihtiyacı görünür kalır; timeout/lease expiry kaynağı boşaltmaz.
+5. Alarm clear ve robot reconnect ayrı enjekte edilir. Bunlar otomatik `Resume`, rota açma veya expired komut replay'i üretmez. Geçişi bir fiziksel etkiyle açmadan önce de aynı yetki/kanıt kuralları geçerlidir.
+6. Yetkili tesis rolü ilgili bölge/rota için normale dönüş kanıtını onaylar; robot mode/pose, kaynak clearance, güncel kısıtlar, policy ve authority uzlaştırılır. Yalnız yeni geçerli kararla normal göreve dönüş değerlendirilir; eski olay onayı başka aktivasyonun kısıtını kaldıramaz.
+7. Olay, robot başına karar/kanıt, belirsizlik ve operatör adımları audit'e bağlanır. Olay analizi/replay yalnız kayıt veya izole simülasyon girdisidir; üretim komut adaptörüne bağlanmaz.
+
+**Hata durumları:** yetkisiz normalleştirme/geri dönüş isteği; yanlış site/zone eşlemesi; stale konum/harita; duplicate alarm veya eski clear; desteklenmeyen tepki; ACK sonrası sonuç kaybı; robot bağlantısı ve çıkış teyidi kaybı; operatöre ulaşılamaması. Kısıtı uygulayamayan adaptöre ilgili yeni görev verilmez. Yetkisiz/unsupported dispatch, kör fiziksel retry, ikinci motion owner ve kısıt/alan boşluğu kanıtsız otomatik devam yoktur.
+
+**Başarı kriteri:** simüle olaydan etkilenen her robot/görev/kaynak için karar, kanıt aşaması ve belirsizlik görünürdür. Kısıtlı rotaya queued dispatch, yetkisiz/unsupported dispatch, duplicate effect ve expired hareket replay sayıları sıfırdır. ACK tek başına doğrulanmış tepki üretmez; kayıp çıkışta kaynak tutulur. Clear/reconnect sonrasında yetkili normale dönüş kararı ve gerekli taze uzlaştırma olmadan normal admission/Resume açılmaz; manuel kontrol de tek kontrol sahibi modelini korur.
+
+**Ölçümler:** güvenilir kaynak zamanı mevcutsa olaydan listener alımına kadar algılama; yerel alımdan policy kararına; dispatch'ten receipt/ACK'e ve ayrı doğrulanmış davranışa süreler ölçülür. Ayrıca cevapsız robot sayısı, doğrulanamayan konum/sonuçlar, operatöre devir ve müdahale süresi kaydedilir. Saat/kaynak kanıtı yoksa ilgili ölçüm bilinmiyor kalır; ACK süresi tepki süresi yerine kullanılmaz. Sayısal kabul eşikleri daha sonra kararlaştırılacak; simülasyon ölçümleri saha hizmet garantisi değildir.

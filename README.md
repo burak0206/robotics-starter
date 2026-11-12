@@ -221,6 +221,12 @@ Robotun geçiş talebinden bağımsız çalışan `SourceListener` adaptörleri 
 
 `FacilityEvent`, tesisin `SiteEmergencyPolicy` kurallarına göre değerlendirilir. `RobotEventPort` üzerinden desteklenen olay bildirimi ile `RobotCommandPort` üzerinden yetkili komut farklı çıktılardır; olay bildirimi görev iptali veya fiziksel duruş sayılmaz. Komut için kimlik/yetki, capability ve komut sahipliği kontrol edilir; `CommandAccepted` ile `VerifiedOutcome` ayrı izlenir. Okuma, yazma ve geri bildirim yetenekleri birbirinden bağımsız doğrulanır: rölenin sürülmesi veya çıkışın okunması kapının fiziksel olarak açıldığını kanıtlamaz.
 
+### Acil durum robot koordinasyonu — planlanan
+
+Mevcut teslimat/temizlik robotlarının yangın, deprem sonrası kısıtlama, su baskını veya gaz alarmında tesis prosedürüne uygun davranışını koordine etmek ürünün planlanan kapsamındadır. Etkilenen robot/görev/kaynaklar, mesaj teslimi, komut kabulü, doğrulanmış tepki ve bağlantısı/konumu belirsiz robotlar ayrı izlenir. Kapı, asansör veya rota yalnız alarm kalktığı ya da robot engel görmediği için kullanılabilir ilan edilmez; normal operasyona dönüş yetkili tesis sürecine bağlıdır.
+
+Özel müdahale robotlarıyla malzeme taşıma, uzaktan keşif ve ölçüm sonraki kapsam adaylarıdır; standart robotların tehlikeli ortama uygunluğu varsayılmaz. Physical AI gözlem ve öneri sağlayabilir; erişim, komut ve normale dönüş yetkisi kazanmaz. İlk teknik adım adayı iki robot, iki bölge, alarm, kısıtlanan geçiş ve robot bağlantı kaybını içeren **planlanan tatbikat simülasyonudur**; henüz uygulanmamıştır ve mevcut pilotu büyütmez. [Ürün sınırları](docs/product-scope.md#emergency-robot-coordination) ve [tatbikat senaryosu](docs/use-cases.md#emergency-drill).
+
 ### Profil tabanlı devreye alma
 
 Planlanan dashboard akışı: doğrulanmış model/firmware ve arayüz profili seçimi → kaynak/gateway ve I/O anlamlarının tanımı → resource/kat/harita eşlemesi → politika, etkilenen robotlar ve yetki ataması → bağlantı/arıza/eski veri ve salt okunur testler → izinli eylemlerin ayrı sonuç doğrulaması → yetkili onayla sürümlü yapılandırmayı yayınlama. Salt okunur bir profil kendiliğinden yazma yetkisi kazanmaz; devreye alma testi sahada onaylanmamış bir fiziksel komut üretmemelidir. Bu ekranlar ve profil yayınlama akışı henüz uygulanmadı.
@@ -472,6 +478,12 @@ The initial Unloc pilot candidate is limited to one robot, one building entrance
 Planned `SourceListener` adapters operate independently of a robot requesting passage. Subscription, notification, or polling is selected for the verified device profile. Alarm, device fault, connectivity loss, and stale data are separate states; **no signal does not mean no alarm**. Normalized events must preserve source identity, time, and data quality.
 
 A `FacilityEvent` is evaluated under the site's `SiteEmergencyPolicy`. A supported event notification through `RobotEventPort` and an authorized command through `RobotCommandPort` are different outputs; an event notification does not count as task cancellation or physical stopping. Commands require identity/authorization, capability, and command ownership checks; `CommandAccepted` and `VerifiedOutcome` are tracked separately. Read, write, and feedback capabilities are verified independently: driving a relay or reading an output does not prove that a door physically opened.
+
+### Emergency robot coordination — planned
+
+Coordinating existing delivery/cleaning robots under site procedures during fire, post-earthquake restrictions, flooding, or gas alarms is planned product scope. Affected robots/tasks/resources, message delivery, command acceptance, confirmed response, and robots with uncertain connectivity/location are tracked separately. A door, elevator, or route is not declared available merely because an alarm clears or a robot sees no obstacle; return to normal operation requires the authorized site process.
+
+Supply delivery, remote reconnaissance, and measurements with dedicated response robots are later candidates; ordinary robots must not be assumed suitable for hazardous environments. Physical AI may provide observations and suggestions without gaining access, command, or return-to-service authority. The first candidate technical step is a **planned drill simulation** with two robots, two zones, an alarm, a restricted passage, and lost robot connectivity; it is not implemented and does not expand the current pilot. See [product boundaries](docs/product-scope.md#emergency-robot-coordination) and the [drill scenario](docs/use-cases.md#emergency-drill).
 
 ### Profile-based commissioning
 

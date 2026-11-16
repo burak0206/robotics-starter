@@ -8,6 +8,8 @@ Unloc kapsam incelemesi: **2026-11-12**. Resmî API belgeleri, kullanıcı gözl
 
 Acil durum kapsam güncellemesi: **2026-11-12**. [Robot koordinasyonu](#emergency-robot-coordination) ve [tatbikat tasarımı](use-cases.md#emergency-drill) yalnız `PLANNED` kapsamıdır; yeni simülatör, adaptör veya test uygulanmamıştır.
 
+Güvenlik test planı incelemesi: **2026-11-16**, GitHub `main` kod tabanı `ed6c564113bcbcd5d43bab0ce21d3942af98a168`. Tek robot/tek simüle kapı için [senaryolar, mevcut test eşlemesi ve issue taslakları](use-cases.md#door-security-tests) hazırlanmıştır. 22 Rust/23 Kotlin test tanımı kaynakta yeniden sayılmış; uygulama testleri bu görevde çalıştırılmamıştır. Yeni auth/test kodu eklenmemiştir.
+
 Bu belge ürün kapsamı, hedef mimari, entegrasyon sınırları ve kabul kriterlerinin tek referansıdır. **Uygulanan özellik listesi değildir.** Bu görevde uygulama kodu, framework, protokol sözleşmesi veya bağımlılık değiştirilmemiştir. Repo ve üst dizinlerde `AGENTS.md` bulunmamıştır.
 
 - [README](../README.md): mevcut projeyi çalıştırma ve doğrulama.
@@ -609,6 +611,8 @@ Bu testler ilk etapta deterministic source/listener ve robot/device simülatörl
 ## 13. İlk küçük geliştirme görevi
 
 **Önerilen backlog maddesi: `P1.1 — AuthorizedDoorRequest`. Bu görevde uygulanmadı.**
+
+İlk kimlik/yetki geliştirmesinin uygulanabilir [güvenlik test planı ve küçük GitHub issue taslakları](use-cases.md#door-security-tests) ayrı bir alt dilimdir. Bu planın bellek içi decision recorder/spy'ı kalıcı audit değildir; aşağıdaki dayanıklı kayıt/deduplication kriterlerini veya P1.1/P1'in tamamını karşılamış sayılmaz. Önerilen `401`/`403` ve gRPC kimlik/yetki retleri mevcut özellik değildir.
 
 Mevcut simülasyonu koruyarak Kotlin'de `ActorContext`, scope'lu ID'ler, `AccessPolicy`, `CommandEnvelope`, `DoorCommandPort` ve `AuditPort` sınırını tek bir authenticated door request akışına ekle. Simulator port'u mevcut Rust kapı davranışına bağlansın. Domain'e vendor/ROS/AWS sınıfı taşınmasın; yığın yeniden yazılmasın ve gerçek cihaz adaptörü eklenmesin. Gereken kimlik doğrulama ve kalıcılık bağımlılıkları bu küçük görevde ayrıca seçilsin.
 

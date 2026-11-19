@@ -260,6 +260,10 @@ Release için ilişkilendirilmiş çıkış/clearance geri bildirimi veya politi
 
 P2'de genel bir optimizasyon motoru yerine tek-edge deterministik resource scheduler yeterlidir. Kaynak alma sırası ve geçiş planı deadlock oluşturmayacak şekilde tanımlanır; kabine girişten önce çıkış alanı/bekleme olanağı doğrulanır. İlerideki kaynağı beklemek, mevcut fiziksel kaynağı kanıtsız serbest bırakma gerekçesi değildir.
 
+**Kapı, asansör ve dar koridor kuyruğu (`PLANNED`).** İlk simülasyonda aynı öncelikteki istekler geliş sırasıyla işlenir. Karşılıklı tek şeritli koridorun iki ucu aynı rezervasyonu paylaşır. Kapı eşiğinin ve asansör çıkışının dışında tanımlı bekleme noktası doluysa robot sıraya uzaktan alınır. Kırmızı/yeşil saha lambası mevcut izni gösterir. Geçiş için ayrıca doğru robota güncel izin ve doğrulanmış boş alan gerekir. Lamba geri bildirimi izinle çelişirse yeni giriş bekletilir; içerideki robotun doluluğu korunur. Open-RMF’nin `traffic_light` adaptörü filo için duraklat/devam komutlarını modeller. Fiziksel lamba kendi cihaz profilini gerektirir. [Open-RMF demoları](https://github.com/open-rmf/rmf_demos/blob/main/README.md) · [Kuyruk ve sinyal kabul senaryoları](use-cases.md#traffic-queue-cases).
+
+Trafik kayıtları ileride görev zamanlamasını iyileştirmek için de kullanılabilir (`PLANNED`). Örneğin bir temizlik görevinin başlangıcı esnekse, geçmiş asansör beklemelerinden beş dakika erken başlamanın yararını tahmin et. Önce geçmiş günlerle eğitip sonraki günlerde sabit saatli planla karşılaştır. Görevin zamanında bitme oranını, asansör bekleme süresini ve diğer robotların kuyruğuna etkisini birlikte ölç. Modelin önerisi, aynı erişim penceresi ve trafik kuralları içinde planlayıcı tarafından değerlendirilir.
+
 ### Harita ve kat eşlemesi
 
 Önerilen `MapBinding`: `tenantId`, `siteId`, `levelId`, `facilityMapId/version`, `robotMapId/version`, `sourceFrame`, `targetFrame`, birim/eksen konvansiyonu, `Transform2D`, `transformVersion`, kalibrasyon kanıtı/toleransı ve geçerlilik.
@@ -322,6 +326,8 @@ Politika/prosedür eksik veya alarm güven durumu belirsizse etkilenen alana yen
 
 Bugünkü sabit `CANCELLED` demo davranışı bir `SiteEmergencyPolicy` uygulaması değildir; regresyon simülasyonu olarak korunur. `ResetCancelledSimulations` sanal robot/doluluk verisini değiştirir ve **üretimde fiziksel recovery endpoint'i olarak kullanılamaz**. Hedefte alarm clear ile fiziksel clearance ayrı yetkili kanıtlar gerektirir.
 
+Doğrudan dinleme için sahada panelin yetkili olay arayüzü, varsa bu olayları taşıyan BMS veya panelin onaylı izleme çıkışını okuyan saha girişi seçilir. Yalnız genel alarm kontağı sunuluyorsa kaynak bilgisi tesis düzeyinde kalır. İlk bağlantı ve yeniden bağlantıda mevcut alarm durumu doğrulanır. Ticari örnek olarak MiRGo'da yayımlanan AI Automation modülü, alarm sinyalini MiR Fleet'teki önceden tanımlı bölgelerden çekilme davranışına bağlar. Yerel ürün profili ve robotun kapı eşiğinde, kuyrukta veya kabinde oluşu bizim tatbikatlarımızda ayrı girdilerdir. [AI Automation modülünün MiRGo kaydı](https://mobile-industrial-robots.com/products/mir-go/ai-automation-ai-smart-fire-alarm-module) · [Alarm tatbikatı](use-cases.md#emergency-drill).
+
 <a id="emergency-robot-coordination"></a>
 
 ### Acil durum robot koordinasyonu — `PLANNED`
@@ -351,6 +357,20 @@ Bugünkü sabit `CANCELLED` demo davranışı bir `SiteEmergencyPolicy` uygulama
 **Açık kararlar:** ilk hedef tesis/operatör, olay kaynakları, hangi robotun hangi ortam ve göreve uygun olduğu, kısıtlama/geri dönüş onay sahipleri, uygulanabilir rota kısıtları, sensör/harita tazeliği ve müdahale hedefleri bilinmiyor. Sayısal tepki/bağlantı kaybı eşikleri ve kabul hedefleri bu taraflarla belirlenmeli; tahminle hizmet garantisi yazılmamalı. Tatbikatın algılama, receipt/ACK ve doğrulanmış tepki süreleri ayrı ölçülür; ölçülemeyen süre başarılı veya sıfır gösterilmez.
 
 **Resmî bağlam kaynakları — 2026-11-12 kontrolü:** [NIST'in Emergency Response Robots programı](https://www.nist.gov/programs-projects/performance-emergency-response-robots), tekrarlanabilir testlerle göreve özgü robot kabiliyeti ve operatör yeterliliğinin ölçülmesini anlatır; performans eşiklerini müdahale kuruluşları belirler, genel güvenlik sertifikası sonucu çıkarılmaz. [SINTEF'in SMURF/CURSOR haberi](https://www.sintef.no/en/latest-news/2025/robot-to-the-rescue-when-buildings-collapse/) ve [CURSOR'un Trondheim test kaydı](https://www.cursor-project.eu/video-library/), Trøndelag itfaiyesiyle prototip arama robotu tatbikatını belgeler. Bunlar araştırma/tatbikat örnekleridir; her afet ortamında doğrulanmış ürün veya bu repo için entegrasyon kanıtı değildir. Yukarıdaki senaryo adları platform tasarımıdır; bu kurumların API/event adları değildir.
+
+<a id="search-robot-rd"></a>
+
+#### Su, sel, taşkın ve deprem için arama robotu geliştirme — `PLANNED`
+
+Uzun vadeli ürün hedefi, müdahale ekibiyle birlikte göreve uygun **arama robotu prototipleri** geliştirmek ve arama görevlerini koordine etmektir. İlk çalışma simülasyonda tanımlı bir sektörü tarama ve bulguları operatöre devretme üzerine kuruludur. Bu Ar-Ge hattı ileride ayrı bir ürüne dönüşebilir. Ortak platform görev yetkisi, operatöre devir, telemetri zamanı, belirsizlik ve olay kaydını sağlar. Araç gövdesi, hareket kabiliyeti, sensör seçimi, iletişim kaybı davranışı ve operatör eğitimi her araç için ayrıca doğrulanır.
+
+| Aday görev | Araç ve saha sorusu | Operatöre teslim edilecek kanıt |
+| --- | --- | --- |
+| Suda arama | Operatör denetimli su üstü aracıyla bir sektörü gözle. Akıntı, görüş ve haberleşme koşullarında araç konumu ile olası hedefin sürüklenmesi nasıl izlenir? | Zaman damgalı son gözlem, konum belirsizliği ve tekrar kontrol edilecek bölge |
+| Sel ve taşkın keşfi | Hava aracıyla suyun kapladığı alanı ve erişim kesintilerini haritala. Su üstü aracına görev verilirse o bölgenin koşulları için uygunluk aranır. | Zamanı ve kapsaması belirtilmiş harita, taranamayan sektörler, ekibin doğrulayacağı olası bulgular |
+| Deprem sonrası enkaz araması | Uzaktan yönetilen küçük kara robotuyla müdahale amirinin atadığı sektörde görüntü veya ses topla. Enkaz hareketi ve bağlantı kaybında taramanın hangi bölümünün tamamlandığı belirlenebiliyor mu? | Son güvenilir konum, gözlemin kaynağı ve zamanı, insan incelemesinin sonucu ve yeniden arama ihtiyacı |
+
+İlk kabul ölçüleri taranan alan oranı, son güvenilir gözlemin yaşı ve bulgunun operatöre ulaşma süresidir. Bağlantısı kesilen robotun kalan alanı açık iş olarak kalır. Saha öncesi eşikler ve geri alma koşulları müdahale ekibiyle tatbikatta belirlenir. ICARUS, Bosna'da 2014 seli sonrası İHA ile hasar tespiti yaptı. Lizbon'daki deniz tatbikatında hava ve su üstü araçlarıyla suda arama denendi. Deprem hattı için yukarıdaki CURSOR enkaz tatbikatı örnek alınabilir. [Bosna sel görevi](https://cordis.europa.eu/article/id/115874-robots-coming-to-the-aid-of-humans-caught-up-in-disaster-zones) · [ICARUS tatbikat raporu](https://cordis.europa.eu/project/id/285417/reporting) · [Planlanan arama tatbikatları](use-cases.md#sar-exercises).
 
 ## 9. Edge ve cloud
 

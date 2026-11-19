@@ -207,6 +207,10 @@ Unloc, üreticiden bağımsız ve değiştirilebilir bir erişim adaptörü üze
 
 İlk Unloc pilot adayı bir robot, tek bina girişi ve tanımlı bir ortak teslimat alanıyla sınırlıdır; daire içine teslimat, asansör ve çok tesisli kullanım sonraki genişlemelerdir. Online cloud API yolu ağ bağlantısı gerektirir; Greengrass bu bağımlılığı kendiliğinden offline çalışmaya dönüştürmez. Cihaz/kontrolcü modeli, erişim kimlik bilgileri/yetkileri ve fiziksel geri bildirim yöntemi henüz belirlenmemiştir. Ayrıntılar [Unloc adaptör sınırında](docs/product-scope.md#unloc-access) ve [teslimat senaryosunda](docs/use-cases.md#unloc-delivery) tutulur.
 
+### Erişim entegrasyonu yol haritası
+
+Unloc ilk teslimat pilotu adayıdır. Nuki, uyumlu kilitlerde yerel bağlantı ve durum takibi için ikinci adaydır. Awaio, ofislerde rezervasyona göre görev planlama ve ayrıca doğrulanacak fiziksel erişim için keşif adayıdır. Amido Access ve DAX, birden çok erişim sistemiyle çalışan tesisler için kurumsal entegrasyon adayıdır. Üç yeni sağlayıcı `PLANNED` durumundadır. [Sağlayıcı karşılaştırması](docs/product-scope.md#access-provider-roadmap) · [Kullanım senaryoları](docs/use-cases.md#access-provider-cases).
+
 ### Planlanan yetenekler
 
 - **İlk ürünün temelleri:** Robot, kullanıcı, servis ve gateway kimlikleri; site/resource/task kapsamlı yetkilendirme; desteklenen bağlantılarda sertifika/mTLS; doğrulanmış cihaz durumu, hata yönetimi ve kalıcı audit. Yetkisiz istek fiziksel komut üretememeli; komut kabulü fiziksel sonuç olarak gösterilmemeli.
@@ -464,6 +468,10 @@ Target equipment includes elevators, automatic/card-controlled doors, access sys
 Unloc is a candidate for a planned vendor-independent, interchangeable access adapter; this repository has no Unloc integration. In the intended flow, the delivery robot's identity, access permission, and active task must be validated before requesting an unlock. An API acknowledgement or access log, where available, does not confirm physical door opening, robot passage, or exit; these require separate evidence. The user has reported a setup pairing Unloc unlocking with an automatic door opener; that report is not field verification.
 
 The initial Unloc pilot candidate is limited to one robot, one building entrance, and a defined common delivery area; delivery inside apartments, elevators, and multi-site operation are later extensions. The online cloud API path requires network connectivity; Greengrass does not automatically turn that dependency into offline operation. The device/controller model, access credentials and permissions, and physical feedback method remain unspecified. Details belong in the [Unloc adapter boundary](docs/product-scope.md#unloc-access) and [delivery scenario](docs/use-cases.md#unloc-delivery).
+
+### Access integration roadmap
+
+Unloc is the first delivery pilot candidate. Nuki is the next candidate for local connectivity and status monitoring on compatible locks. Awaio is a discovery candidate for scheduling office tasks around bookings, with physical access to be verified separately. Amido Access and DAX are enterprise integration candidates for sites with multiple access systems. The three new providers are `PLANNED`. [Provider comparison](docs/product-scope.md#access-provider-roadmap) · [Use cases](docs/use-cases.md#access-provider-cases).
 
 ### Planned capabilities
 

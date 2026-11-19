@@ -131,6 +131,7 @@ Bu bölümdeki İngilizce case ve olay adları **dokümantasyon kimlikleridir**;
 | `ConveyorTransfer` | Robot–endüstriyel konveyör yük aktarımını eşgüdümle | El sıkışması ve sensör kanıtı gerekir; üretici register'ı varsayılmaz |
 | `SiteCommissioning` | Kurulum profilini kur, test et ve onaylı sürüm olarak yayımla | Cihaz/robot yetenekleri kanıtlanır; serbest güvenlik kuralı editörü değildir |
 | [`EmergencyCoordinationDrill`](#emergency-drill) | İki robot/bölgede alarm, geçiş kısıtı ve bağlantı kaybını birlikte değerlendir | Yalnız planlanan tatbikat; mevcut sabit alarm demo'su veya gerçek afet uygunluğu değildir |
+| [Erişim sağlayıcısı adayları](#access-provider-cases) | Nuki yerel erişim, Awaio rezervasyon ve Amido görev kapsamlı erişim senaryoları | `PLANNED`. Sağlayıcı arayüzü ve fiziksel geri bildirim tesise göre doğrulanır |
 
 ### `FacilityAlarmResponse`: bağımsız kaynak, tesis politikası, robot tepkisi
 
@@ -323,6 +324,17 @@ Bu, ilk teknik tatbikat adayıdır; **bu görevde simülatör, test veya uygulam
 
 **Ölçümler:** güvenilir kaynak zamanı mevcutsa olaydan listener alımına kadar algılama; yerel alımdan policy kararına; dispatch'ten receipt/ACK'e ve ayrı doğrulanmış davranışa süreler ölçülür. Ayrıca cevapsız robot sayısı, doğrulanamayan konum/sonuçlar, operatöre devir ve müdahale süresi kaydedilir. Saat/kaynak kanıtı yoksa ilgili ölçüm bilinmiyor kalır; ACK süresi tepki süresi yerine kullanılmaz. Sayısal kabul eşikleri daha sonra kararlaştırılacak; simülasyon ölçümleri saha hizmet garantisi değildir.
 
+Hastane için planlanan operatör görünümü, etkilenen bölgeleri, görevleri, rezervasyonları ve geçiş doluluğunu birlikte gösterir. Her robot için son konumun zamanı, olayın teslimi, komutun kabulü, doğrulanmış tepki ve müdahale gereksinimi ayrı gösterilir. Bağlantısı kaybolan robotun konumu son bilinen konum olarak kalır. Eşik doluluğu belirsizse operatör doğrulaması istenir. [Acil durum robot koordinasyonu](product-scope.md#emergency-robot-coordination).
+
+İlk tatbikatın ardından değerlendirilecek varyantlar da `PLANNED` durumundadır.
+
+| Varyant | Akış ve kabul ölçütü |
+| --- | --- |
+| Deprem sonrası erişim kısıtlaması | Yetkili tesis ekibi bir katı veya asansörü inceleme bitene kadar kısıtlar. Önceden kuyruklanmış hedefler yeni rotaya göre denetlenir. İlgili kaynak ancak güncel saha kanıtı ve yetkili onayla tekrar kullanılabilir. |
+| Su baskını veya gaz alarmı | Kaynak verisi ve etkilenen bölge doğrulanır. Ortam uygunluğu kanıtlanmayan robotun yeni görevi reddedilir. Bölgedeki robotun davranışını tesis prosedürü ve desteklenen eylemler belirler. |
+| Müdahale ekibine malzeme taşıma | Yetkili ekip teslim noktasını ve onaylı güzergâhı belirler. Robot ve yük profili görevle eşleşirse görev yürütülür. Teslim sonucu ve robotun dönüşü ayrı izlenir. |
+| Uzaktan keşif, ölçüm ve arama desteği | Uygun robot ve operatörle toplanan gözlemler konum, zaman ve veri kalitesiyle ekibe gösterilir. Eski veya konumsuz ölçümler belirsiz olarak işaretlenir. Rota ve yeniden kullanım kararı yetkili ekipte kalır. |
+
 <a id="door-security-tests"></a>
 
 ## İlk kimlik ve yetki geliştirmesi: tek kapı güvenlik test planı — `PLANNED`
@@ -393,3 +405,47 @@ Aşağıdaki başlık/açıklamalar yayıma hazır taslaktır; bu görevde GitHu
 | `I6 — Verify authorized door flow and alarm precedence end to end` | Gerçek Kotlin security chain → gRPC transport → Rust simulator ile `SEC-05/07/08` ve transport kısmı `SEC-11` için kapı odaklı kabul fixture'ı ekle. Alarm gate, son sensör durumu, ACK/açılma ayrımı ve timeout sonrası tek deneme korunsun; mevcut 45 kaynak testi regresyon olarak çalıştırılsın. Çalıştırılan sonuçlar ayrıca raporlansın |
 
 İlk küçük PR yalnız request kimliği/yetkisini tamamlıyorsa `start`, simulation ve alarm yolları anonim alternatif olarak açık bırakılamaz; bunlar korunana kadar normal kullanımda reddedilir. Kalıcı audit, dayanıklı command journal/idempotency, restart reconciliation, üretim PKI/mTLS, gerçek cihaz bağlantısı ve robot navigasyonu bu test alt planıyla tamamlanmaz. [P1.1/P1'in mevcut dayanıklı kayıt ve diğer kabul kriterleri](product-scope.md) korunur; test spy'ının çalışması bunları karşılamaz. Unloc, asansör veya afet robotu entegrasyonu bu ilk güvenlik kapsamına eklenmez.
+
+<a id="access-provider-cases"></a>
+
+## Erişim sağlayıcısı adayları — `PLANNED`
+
+Bu üç senaryo, Unloc sonrası entegrasyon keşfinin hedef akışlarını ve kabul koşullarını tanımlar. Model, arayüz ve yetki önkoşulları tesis bazında doğrulanacaktır. [Erişim sağlayıcısı yol haritası](product-scope.md#access-provider-roadmap).
+
+Her senaryoda platformun erişim/görev kararı fiziksel dispatch'ten önce uygulanır; sağlayıcının kendi yetki denetimi ayrıca korunur. Robot hareketi mevcut tek `CommandOwner`'dan geçer. Erişim talebinin ACK'i, rezervasyon veya erişim olayı fiziksel `DoorOpen`/tam footprint clearance kanıtı değildir. Bu kanıtlar doğrulanamıyorsa otomatik geçiş verilmez; desteklenmeyen yazma yolu denenmez.
+
+### `NukiLocalAccess`: yerel ağ ve WAN sınırını ayır
+
+**Aktörler:** robot ve mevcut kontrol sahibi, platform erişim/görev koordinatörü, edge gateway/erişim adaptörü, bina yöneticisi.
+
+**Önkoşullar:** seçilen cihaz/model/firmware için kullanılabilir arayüz, kimlik ve erişim hakları doğrulanır. Yerel ağ yolu ile WAN/bulut bağımlılığı ayrı profile kaydedilir; bir cihazın Nuki olması yerel erişim veya WAN'dan bağımsız çalışma garantisi sayılmaz. Fiziksel kapı açılma/clearance kanıtı ayrıca tanımlıdır.
+
+**Akış:** geçerli robot/görev/kaynak ve zaman koşulları denetlenir → yalnız profilde doğrulanmış erişim yolu seçilir → izinli kilit işleminin sonucu kaydedilir → taze fiziksel açılma kanıtıyla robot geçişi değerlendirilir. WAN kesilince sağlıklı yerel yol, yalnız geçerli kimlik/politika ve onaylı offline koşullarla kullanılabilir; yerel yol kaybolunca kendiliğinden bulut üzerinden ikinci yazma yolu açılmaz.
+
+**Başarısızlık:** yerel ağ kaybı, WAN kaybı, credential/yetki reddi ve dispatch sonrası yanıtsızlık ayrı gösterilir. Sonuç belirsizse kör retry veya desteklenmeyen alternatif protokol yoktur; kapı açık/robot geçmiş sayılmaz ve kaynak kanıtsız bırakılmaz.
+
+**Kabul:** yerel ağ sağlıklı/WAN kesik ile yerel ağ kesik/WAN sağlıklı varyantları ayrı sınanır; yalnız doğrulanmış ve yetkili yol dispatch üretir. ACK tek başına geçiş açmaz; fiziksel açılma ve tam geçiş ayrı kanıtlanır. Offline koşulları doğrulanamayan profil otomatik erişime uygun sayılmaz.
+
+### `AwaioReservedAccess`: rezervasyonu fiziksel erişimden ayır
+
+**Aktörler:** rezervasyonu oluşturan yetkili kullanıcı, temizlik veya teslimat robotu, platform görev/erişim koordinatörü, rezervasyon sistemi, doğrulanırsa Smart Access Box entegrasyonu ve bina operatörü.
+
+**Önkoşullar:** rezervasyonun kaynak/zaman/görev eşlemesi tanımlıdır. Awaio rezervasyonu ile fiziksel erişim hakkı ayrı doğrulanır. Smart Access Box'ın seçilen sahadaki bağlantısı, hangi cihazı etkilediği, feedback'i ve robotun kullanıcı uygulaması olmadan çalışacağı headless erişim yolu bilinmiyorsa otomatik erişim capability'si verilmez.
+
+**Akış:** rezervasyon görev ve zaman aralığına bağlanır → platform kapı erişim kararını ayrıca verir → yalnız belgelenmiş/yetkili fiziksel erişim yolu varsa işlem değerlendirilir → bağımsız açık/geçiş kanıtından sonra robot geçişi yürütülür. Rezervasyon kimliği erişim grant'i veya komut idempotency anahtarı yerine kullanılmaz.
+
+**Başarısızlık:** rezervasyonun iptali/bitmesi, kaynak uyuşmazlığı, Smart Access Box bağlantı kaybı veya headless yolun doğrulanamaması otomatik unlock gerekçesi değildir. Kullanıcı uygulamasındaki işlevin robot API'si olduğu varsayılmaz. Geçiş sırasında rezervasyonun bitmesi fiziksel alanı boşaltmaz; operatör devri mevcut prosedüre uyar.
+
+**Kabul:** yalnız geçerli rezervasyon varken bile ayrıca erişim hakkı/kanıtı yoksa fiziksel dispatch sıfırdır. Desteklenmeyen headless kullanım açıkça gösterilir; doğrulanmış erişim profili varsa rezervasyon, komut ACK'i ve fiziksel geçiş sonuçları ayrı izlenir.
+
+### `AmidoScopedAccess`: göreve bağlı grant ve geri alma
+
+**Aktörler:** yetkili bina/erişim yöneticisi, platform kimlik/görev koordinatörü, robot, doğrulanmış sağlayıcı adaptörü ve saha operatörü.
+
+**Önkoşullar:** seçilen Amido/erişim sistemi için belgelenmiş entegrasyon hakkı ve capability profili bulunur. Görev/robot, süre ve kaynak kapsamının sağlayıcıda nasıl temsil edildiği, revoke etkisi ve bağımsız fiziksel feedback doğrulanır; daha dar yetki desteklenmiyorsa bunun yerine geniş ve süresiz hak verilmez.
+
+**Akış:** platform göreve, süreye ve kaynağa bağlı erişim kararını oluşturur → destekleniyorsa karşılık gelen grant bağlanır → her fiziksel talep öncesi güncel görev/yetki yeniden denetlenir → açılma/geçiş ayrı kanıtlanır → görev bitişi, expiry veya iptalde yeni admission kapanır ve profildeki revoke işlemi/sonucu izlenir. Revoke kabulü fiziksel kapının kilitlendiği veya robotun çıktığı anlamına gelmez.
+
+**Başarısızlık:** yanlış görev/kaynak, expired/iptal edilmiş grant veya yetki kapsamının doğrulanamaması gönderim üretmez. Revoke yanıtsız/pending ise hak geri alındı diye raporlanmaz; platform yeni dispatch'i engeller ve sağlayıcı durumunu uzlaştırır. Eski callback iptal edilmiş grant'i yeniden geçerli yapmaz; doluluk fiziksel clearance gelene kadar korunur.
+
+**Kabul:** kapsam dışı ve geri alınmış grant'le yeni dispatch sıfırdır; grant/revoke durumu ile fiziksel kapı/robot durumu ayrı kanıtlanır. DAX cloud veya Smart Passage bağlantısı, platformun `AccessPolicy`, görev/kaynak koordinasyonu, `SiteEmergencyPolicy` ya da mevcut komut sahipliğini bu ürünlere devretmez; sağlayıcının kendi erişim kontrolü de baypas edilmez. Bu ayrımı koruyamayan profil otomatik kullanıma açılmaz.

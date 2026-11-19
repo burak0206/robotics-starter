@@ -10,6 +10,8 @@ Acil durum kapsam güncellemesi: **2026-11-12**. [Robot koordinasyonu](#emergenc
 
 Güvenlik test planı incelemesi: **2026-11-16**, GitHub `main` kod tabanı `ed6c564113bcbcd5d43bab0ce21d3942af98a168`. Tek robot/tek simüle kapı için [senaryolar, mevcut test eşlemesi ve issue taslakları](use-cases.md#door-security-tests) hazırlanmıştır. 22 Rust/23 Kotlin test tanımı kaynakta yeniden sayılmış; uygulama testleri bu görevde çalıştırılmamıştır. Yeni auth/test kodu eklenmemiştir.
 
+**2026-11-19** güncellemesinde Nuki, Awaio ve Amido [erişim entegrasyonu yol haritasına](#access-provider-roadmap) eklendi. Özel robotlarla arama desteği [acil durum kapsamına](#emergency-robot-coordination) sonraki aşama adayı olarak işlendi. Tüm yeni adaylar `PLANNED` durumundadır.
+
 Bu belge ürün kapsamı, hedef mimari, entegrasyon sınırları ve kabul kriterlerinin tek referansıdır. **Uygulanan özellik listesi değildir.** Bu görevde uygulama kodu, framework, protokol sözleşmesi veya bağımlılık değiştirilmemiştir. Repo ve üst dizinlerde `AGENTS.md` bulunmamıştır.
 
 - [README](../README.md): mevcut projeyi çalıştırma ve doğrulama.
@@ -333,6 +335,7 @@ Bugünkü sabit `CANCELLED` demo davranışı bir `SiteEmergencyPolicy` uygulama
 | `EnvironmentalHazardRestriction` | Su baskını/gaz olayında etkilenen bölgeye uygun olmayan robotun yeni girişini reddet | Güvenilir kaynak, zone eşlemesi ve robotun üretici tarafından belirtilen çalışma sınırları; devam eden robotun davranışı ayrıca prosedüre bağlı |
 | `ResponseSupplyDelivery` | Onaylı robotla müdahale ekibinin belirlediği noktaya malzeme görevini koordine et | Sonraki kapsam; görev/rota/yük/ortam uygunluğu ve yetkili görev onayı gerekir, normal erişim yasağı kendiliğinden aşılmaz |
 | `RemoteReconnaissance` | Özel robotun kamera/termal/gaz gözlemlerini konum ve veri kalitesiyle ilişkilendir | Sonraki kapsam; uygun robot/sensör, kalibrasyon, harita/konum ve operatör gerekir; ölçüm veya AI sonucu alanın güvenli olduğunu kanıtlamaz |
+| `ResponseSearchSupport` | Yetkili arama ekibine uygun robotların konum, gözlem ve görev durumunu aktar | Keşif sonrası kapsam adayı. Robot, operatör ve iletişim koşulları göreve göre doğrulanır. Arama alanı ve görev yetkisi müdahale ekibindedir |
 | `EmergencyCoordinationDrill` | Olay, kısıtlı geçiş ve bağlantı kaybında karar/tepki/belirsizliği ölç | İlk teknik adım adayı; yalnız tasarım, repoda uygulanmış tatbikat simülatörü veya saha kanıtı yok |
 
 **Operasyon görünümü:** robotun son doğrulanmış bölgesi/konumu, gözlem zamanı ve kalitesi; ilgili görevler, rezervasyonlar ve geçiş doluluğu; olayın hedefe gönderilmesi/alınması; komutun kabulü ve ayrı doğrulanmış davranış; sonucun belirsizliği ve operatör devri birlikte gösterilir. Konumu eski robotun mevcut bölgede olduğu veya geçişi engellediği kesin yazılmaz; yalnız son bilinen konum ve doğrulama ihtiyacı gösterilir. Bildirim/komut kanıt aşamaları [mevcut olay hattındaki](#facility-event-pipeline) ayrımı kullanır. Her robot bütün aşamaları desteklemeyebilir; eksik capability başarılı sonuç olmaz.
@@ -416,6 +419,9 @@ Bu bölümdeki kaynaklar **2026-11-10 tarihinde incelenmiş referanslardır**. S
 | Fiziksel trafik ışığı | Ortak geçiş için gösterge/control state | Lamba değil kontrolcünün modeli, renk/izin anlamı, feedback ve bağlantı kaybı davranışı | `PLANNED` |
 | Yangın alarmı olayları | Güvenilir olayın site prosedürüne göre görevlere etkisi | Panel/model, olay arayüzü, zone mapping, source trust ve onaylı prosedür | Sabit demo politikası `SIMULATED`; gerçek panel yok |
 | Unloc erişim sistemi | Teslimat robotu için yetkili online lock operation adayı; fiziksel kapı doğrulaması ayrı | Bina/kilit/kontrolcü, bağlantı tipi, project/module yetkisi, motor ve feedback; [ayrıntılı durum matrisi](#unloc-access) | `PLANNED`; Unloc adapter'ı veya Unloc-specific simulator yok |
+| Nuki | Uyumlu akıllı kilitlerde komut ve durum, yerel veya bulut bağlantısı | Model, firmware, bağlantı profili ve motor/fiziksel geri bildirim. [Yol haritası](#access-provider-roadmap) | `PLANNED` |
+| Awaio | Tesis rezervasyon verisi ve ayrı fiziksel erişim keşfi | Makineden makineye yetki, olay kapsamı ve Smart Access Box profili. [Yol haritası](#access-provider-roadmap) | `PLANNED` |
+| Amido Access / DAX | Kurumsal erişim yönetimi ve görevle sınırlı geçici erişim keşfi | API onayı, iş ortağı kapsamı, bağlı kontrolcü işlevleri ve geri bildirim. [Yol haritası](#access-provider-roadmap) | `PLANNED` |
 | Eaton adayı | Belgelenmiş rolüne göre PLC/akıllı röle/I/O veya başka kontrolcü | **Tam model/part number ve firmware olmadan cihaz tipi/protokol seçilmez**; lisans ve wiring manual gerekir | `PLANNED / ModelUnknown` |
 | Bosch AVENAR adayı | Belgelenmiş FSI/OPC/BACnet seçeneklerinden uygun olay/durum listener'ı | Panel/model/firmware, ilgili server/SDK ve lisanslar; BACnet server V1.0 belgesi read-only yönü gösterir | `PLANNED / ModelProfilePending`; panel kontrolü veya alarm reset desteği iddia edilmez |
 | Advantech ADAM-6266 adayı | Üretici sayfasındaki dijital giriş/röle çıkışı ve network arayüzü üzerinden field gateway | Hardware/firmware, giriş/çıkış semantiği, izinli write, feedback sensörü ve transport security profili | `PLANNED / ModelProfilePending`; repo adapter'ı ve saha uygunluk kanıtı yok |
@@ -530,6 +536,40 @@ Unloc online operation yine Unloc bulutuna gerekli network erişimini ister. Loc
 8. Ortak delivery area, rota/no-go constraints, tek motion owner ve bağımsız yangın/erişim kısıtlama prosedürleri nasıl onaylanacak?
 
 Bu sorular kod yazarak veya mevcut motor gözleminden sonuç çıkararak kapatılamaz. Pilot için ilk bağımlılık API uygunluğu ve bina bazlı yetkilendirmedir; fiziksel zincirin kontrollü saha doğrulaması ayrı bir sonraki kapıdır.
+
+<a id="access-provider-roadmap"></a>
+
+### Erişim sağlayıcıları yol haritası — `PLANNED`
+
+Her tesis için desteklenen arayüz ve cihaz profili seçilir. Platform görev, robot kimliği, zaman penceresi, kaynak ve hareket yetkisini yönetir. Sağlayıcıya ait komutlar ve geri bildirim [cihaz profiline](#device-profiles) bağlanır ve `BuildingResourcePort` üzerinden değerlendirilir. Rezervasyon veya erişim olayı, anlamı ve kapsamı doğrulandığında görev planına ya da tesis olay hattına girdi olabilir. Aktif görev ve kaynak yetkisi, komut öncesinde platform tarafından ayrıca doğrulanır. Kabul edilen işlem, kilidin çözülmesi, kapı kanadının geçişe uygun açıklığı ve robotun çıkışı ayrı kanıtlarla izlenir.
+
+| Öncelik | Aday ve ürün rolü | İlk doğrulama |
+| --- | --- | --- |
+| İlk pilot adayı | **Unloc** ile tek robot, tek giriş ve ortak teslimat alanı | Hedef girişte yetkili online API ve fiziksel geçiş zinciri. [Unloc pilotu](#unloc-access) |
+| İkinci teknik aday | **Nuki** ile yerel kilit komutu ve durum okuma | Tek uyumlu model/firmware, yerel ağ güvenliği, komut yetkisi, açıcı ve bağımsız fiziksel geri bildirim. WAN kesintisi ve yerel broker kaybı ayrı denenir |
+| Ofis keşfi | **Awaio** ile kullanım/rezervasyon bilgisine göre görev zamanlama. Fiziksel erişim ikinci keşif hattı | Yetkili rezervasyon verisi ve güncelliği, makineden makineye komut/olay arayüzü ve kontrolcüden geri bildirim |
+| Kurumsal erişim keşfi | **Amido Access / DAX** ile müşterinin mevcut erişim sistemine bağlanma ve görevle sınırlı geçici izin | Sözleşme ve yazılı API onayı, kurulum tipi, bağlı sistem/model/sürüm, robot kimliğinin sağlayıcı tarafındaki temsili ve izin sonlandırma davranışı |
+
+Nuki, Awaio ve Amido için repo durumu `PLANNED`. Sağlayıcıya özel adaptör, simülatör veya saha doğrulaması henüz yok. Senaryolar ortak geçiş akışını kullanır. [Kullanım senaryoları](use-cases.md#access-provider-cases).
+
+#### Nuki
+
+- Nuki Support, MQTT için Ultra, Pro (5. nesil), Go, 4. nesil Smart Lock ailesi, 3.0 Pro ve Smart Module modellerini listeliyor. Wi-Fi veya Thread seçimi cihaz profiline bağlı. Uygulamadaki `Allow locking` ayarı cihazı yalnız bilgi paylaşımıyla sınırlayabiliyor. Belgelenen cihaz–broker MQTT bağlantısı şifrelenmiyor. Saha onayı için model/firmware, ağ izolasyonu, kimlik bilgileri ve broker yetkileri doğrulanmalı. [MQTT Integration](https://help.nuki.io/hc/en-001/articles/12947926779409-MQTT-integration), [Activate MQTT](https://help.nuki.io/hc/en-001/articles/14052016143249-Activate-MQTT-via-the-Nuki-App).
+- Bridge HTTP API, uyumlu bir Nuki Bridge'e yerel HTTP çağrısı gönderir. Bridge bağlı cihazla BLE üzerinden haberleşir ve cihazın bildirdiği durum değişikliklerini iletebilir. Bridge uyumluluğu ve internet kesintisindeki davranış seçilen profil için doğrulanır. Nuki Web API çevrimiçi cihaz bağlantısı kullanır ve yazma isteklerini asenkron işler. Başarılı HTTP yanıtından sonra işlem sonucu ayrıca sorgu veya olayla izlenir. [Bridge HTTP API](https://developer.nuki.io/t/bridge-http-api/26), [Desteklenen bağlantı seçenekleri](https://help.nuki.io/hc/en-001/articles/4402921104145-I-want-to-control-my-Nuki-device-remotely-Which-options-do-I-have), [Web API Concepts](https://docs.nuki.io/guide/overview/concepts/).
+- Yerel çalışma adayı saha gateway'i, yerel broker ve desteklenen kilitle sınırlı bir pilot profili. WAN kesildiğinde çalışma iddiası geçerli yerel erişim politikası ve taze geri bildirimle saha testinde doğrulanır. Ağ/cihaz kaybında otomatik bulut geçişi ve sonucu bilinmeyen komutun yeniden gönderimi planlanmaz. Montaj, egress, kapı açıcı ve sensör uygunluğu kilit API'sinden bağımsız değerlendirilir.
+
+#### Awaio
+
+- İş yeri platformu oda/masa rezervasyonu, dolap yönetimi, mobil erişim ve entegrasyon seçenekleri sunuyor. Ürün sayfaları API ve webhook'lardan söz ediyor. İlk keşif, izinli oda/rezervasyon bilgisinin temizlik ve teslimat zamanlamasına kullanılabilirliğini ölçer. Rezervasyon kimliği, değişiklik/iptal bildirimi, veri gecikmesi ve alan eşlemesi doğrulanır. Fiziksel erişim yetkisi ayrı karardır. [Awaio Platform](https://awaio.com/platform), [Entegrasyonlar](https://awaio.com/resources/integrations), [Awaio](https://awaio.com/).
+- Smart Access Box (AWR4B) için üretici dört potansiyelsiz röle çıkışı ve mevcut kapı, bariyer, turnike, dolap gibi kontrol girişlerine bağlanan mobil erişim kullanımını belgeliyor. Telefon/Bluetooth akışı belgelenmiş durumda. Sunucudan veya Linux gateway'den doğrudan açma komutu, robot için kullanılabilir credential, webhook kapsamı ve bağımsız fiziksel durum okuma sözleşmesi açık kaynaklarda doğrulanmadı. Teknik keşifte bunlar ve sahadaki kontrol girişinin uygunluğu doğrulanır. Röle tetikleme, geçiş için ayrıca kanıt gerektirir. [Smart Access Box](https://awaio.com/product/mobile-access-box).
+
+#### Amido Access, DAX ve Smart Passage
+
+- **Amido Access**, eski adıyla **Alliera**, farklı markaların erişim yönetimini merkezileştirir ve hem bulut hem yerel kurulum seçeneği sunar. Üretici listesinde ASSA ARX, Aptus MultiAccess, Axema VAKA, Bravida Integra, RCO R-Card M5 ve Salto ProAccess SPACE gibi örnekler var. Sürüm, modül, lisans ve işlevler bağlı sisteme göre değişir. Ürün spesifikasyonu API ile kapı açmayı kullanım örneği olarak verir ve entegrasyon API kullanımı için Amido'nun yazılı onayını belirtir. Hedef tesisin API kapsamı ve fiziksel geri bildirimi ayrıca doğrulanır. [Amido Access](https://www.amido.se/produkter/amido-access), [Ürün adları ve tanımlar](https://support.amido.se/support/solutions/articles/33000295403-standarddefinitioner-alliera), [Sürüm ve sistem desteği](https://support.amido.se/support/solutions/articles/33000242798-vilka-system-st%C3%B6ds-i-alliera-), [Ürün ve API koşulları](https://www.amido.se/terms-and-conditions/tjanstespecifikation-och-produktspecifikation).
+- **DAX** için belgeler Amido iş ortağı anlaşmasını ve uzak kaynak üzerindeki işlemi sınırlandıran taraflar arası sözleşmeyi tanımlar. Geçici yetki verme ve geri çekme örnekleri belirli entegrasyon senaryolarına aittir. Robot için hangi izin türünün ve işlemin kullanılabileceği açık karardır. DAX, Amido'nun dış servislerine bağlantı gerektirir. Yerel Amido Access kurulumu DAX işlemlerine çevrimdışı çalışma sağlamaz. [DAX Concepts](https://dax-docs.amido.se/daxconcepts/), [DAX Onboarding](https://dax-docs.amido.se/daxneed/), [Technical Use Cases](https://dax-docs.amido.se/usecases/), [Connectivity](https://dax-docs.amido.se/connectivity/).
+- **Smart Passage**, İsveç'te SOS Alarm ile ilişkili olaylarda yetkili ambulans ve kurtarma ekiplerinin geçici erişimini etkinleştirir. Kapı işlemi, ekibin ilgili adreste kendi erişim aracını kullanmasıyla başlar. Bu örnek, görev, süre ve yerle sınırlı yetki tasarımına referanstır. Robot yetkisi ve platforma SOS Alarm olayı sağlanması için ayrı teknik ve kurumsal doğrulama gerekir. Acil robot koordinasyonu güvenilir tesis olay kaynağına ve yetkili tesis prosedürüne dayanır. [Smart Passage](https://www.amido.se/produkter/smart-passage).
+
+Kurumsal teslimat için platformun hedefi, yetkili görev ve zaman aralığına bağlı erişim talebini doğrulanmış geçişle ilişkilendirmektir. Görev tamamlanınca veya iptal edilince yeni komut izni platformda kapanır. Sağlayıcıdaki geçici iznin sonlandırılması ve sonucu ayrıca izlenir. Bağlantı kaybı, geciken iptal veya kısmi sonuç varsa yetki durumu belirsiz olarak tutulur ve tesis prosedürüne göre operatöre aktarılır.
 
 ## 11. AWS IoT Greengrass V2 dağıtım adaptörü
 

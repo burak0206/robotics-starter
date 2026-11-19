@@ -2,9 +2,14 @@
 
 [Türkçe](#turkce) · [English](#english)
 
-# Robot–bina entegrasyonu başlangıç projesi
+# Robot–tesis entegrasyonu başlangıç projesi
 
-Bu projede teslimat ve temizlik robotlarını bina sistemlerine bağlayan bir platform geliştiriyorum. Hedef, robotların kapı ve asansör kullanımını, ortak geçitlerdeki sırasını ve yangın alarmı gibi tesis olaylarına tepkisini koordine etmek.
+Bu projede mobil robotların depolar, iş yerleri ve konutlar gibi farklı tesislerde görev yapabilmesi için robotlarla tesis sistemleri arasındaki entegrasyonu geliştiriyorum. Proje dört çalışma alanını kapsıyor.
+
+1. **Robot–tesis entegrasyonu.** Yük taşıyan veya görev rotasında ilerleyen robotların kapı, asansör, turnike ve bariyer gibi tesis ekipmanlarını kullanabilmesi.
+2. **Bina ve sitelere robotla teslimat.** Teslimat robotunun yetkili girişten siteye veya binaya girmesi, gerektiğinde asansörle kat değiştirmesi ve hedef dairenin kapısına ulaşması.
+3. **Ortak alanlarda hareket koordinasyonu.** Asansöre biniş ve iniş sırası, dar koridorlarda geçiş, bekleme noktaları ve fiziksel trafik ışıkları. Yangın alarmında görevlerin ve geçiş izinlerinin tesis prosedürüne göre yönetilmesi.
+4. **Afet ve acil durum robotları.** Arama kurtarma, uzaktan keşif ve malzeme taşıma gibi görevlerde çalışabilecek robotlar için uzun vadeli Ar-Ge.
 
 Bugünkü sürümde kapı geçişi, asansör kullanımı ve yangın alarmında geçişlerin iptali ayrı simülasyonlar olarak denenebilir. Web arayüzünden robotun durumunu izleyebilir ve simülasyonları donanım olmadan adım adım ilerletebilirsin.
 
@@ -275,11 +280,16 @@ Pilotlarda insansız tamamlanan görev oranı, her 100 görevde müdahale sayıs
 
 <a id="english"></a>
 
-# Robot–building integration starter
+# Robot–facility integration starter
 
 [Türkçe](#turkce) · [English](#english)
 
-I'm building a platform that connects delivery and cleaning robots to building systems. The goal is to coordinate how robots use doors and elevators, take turns at shared passages, and respond to facility events such as fire alarms.
+I'm developing a platform that connects mobile robots to facility systems so they can carry out tasks in warehouses, workplaces, residential buildings, and other sites. The project covers four areas.
+
+1. **Robot–facility integration.** Enable robots carrying loads or following task routes to use facility equipment such as doors, elevators, turnstiles, and barriers.
+2. **Robot delivery to buildings and residential complexes.** Enable a delivery robot to enter through an authorized entrance, take an elevator when needed, and reach the destination apartment door.
+3. **Movement coordination in shared spaces.** Manage elevator boarding and exit order, narrow corridor passage, waiting points, and physical traffic lights. Adjust tasks and passage permissions during a fire alarm according to site procedures.
+4. **Disaster and emergency response robots.** Long-term research into robots that can support search and rescue, remote reconnaissance, and supply transport.
 
 The current version offers separate simulations for door passage, elevator use, and passage cancellation during a fire alarm. In the web interface, you can monitor robot status and step through the simulations without hardware.
 

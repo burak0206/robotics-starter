@@ -4,15 +4,16 @@
 
 # Robot–bina entegrasyonu başlangıç projesi
 
-Bir teslimat robotu asansöre geldiğinde kabinin doğru katta olduğunu, kapının açıldığını ve geçiş yolunun boş olduğunu nasıl bilir? Bu proje, robot ile binanın birlikte vermesi gereken kararları donanım gerektirmeyen bir simülasyonda inceler. Hedef, farklı tesislerde aynı görevi mevcut bina sistemlerine bağlayabilmektir.
+Bir teslimat robotunun motorlu girişten geçip asansörle kat değiştirdiğini düşün. Hedef, kapının geçişe hazır olduğunu ve doğru kabinin doğru katta beklediğini doğrulayarak aynı görevi farklı binalarda yürütebilmek. Bugün kapı, asansör ve alarm adımları donanımsız demolar olarak ayrı ayrı denenebilir.
 
 | Özellik | Bugün deneyebileceğin veya planlanan kapsam |
 | --- | --- |
-| Robot durumu ve durdurma | Simülatörde durum, hız, pil ve durdurma. İsteğe bağlı ROS 2 adaptörü sıfır hız komutu yayınlar. Fiziksel duruş teyidi açık bir doğrulama adımıdır. |
-| Kapı, asansör ve yangın alarmı | **Simülasyon.** Kapının açılması ve eşiğin boşalması, kabine giriş ve çıkış, alarmda iptal ve açık bir sıfırlama adımı. |
-| Tesis bağlantıları | **Plan.** Kapı/asansör/turnike kontrolcüleri ve bağımsız yangın paneli dinleyicisi. Tesise göre üretici API’si, endüstriyel I/O veya onaylı kontrol girişine bağlanan mikrodenetleyici/röle profili. [Erişim sağlayıcıları](docs/product-scope.md#access-provider-roadmap) |
-| Ortak geçişler | **Plan.** Dar koridorda yön sırası, kapı ve asansör önünde bekleme noktaları, fiziksel kırmızı/yeşil ışık ve doğrulanmış çıkış. [Trafik senaryoları](docs/use-cases.md#traffic-queue-cases) |
-| Afetlerde arama | **Gelecek Ar-Ge.** Depremde enkaz araması ve su/sel/taşkında arama için özel robotlarla operatör gözetiminde tatbikatlar. [Arama senaryoları](docs/use-cases.md#sar-exercises) |
+| Robot durumu ve durdurma | `SIMULATED`. Arayüz bağlantıyı, robot durumunu ve örnek pil/hız verisini gösterir. Durdurma simülatör durumunu günceller. |
+| Kapı, asansör ve yangın alarmı | `SIMULATED`. Kapı ve kabin olayları elle ilerletilir. Alarm etkin geçişleri iptal eder. Açık sıfırlama adımı iptal edilmiş demoları başlangıca alır. |
+| ROS 2 durdurma yayını | `IMPLEMENTED_UNVERIFIED`. Yerel ROS 2 ortamında sıfır hız komutu yayımlanır. Fiziksel duruş saha doğrulaması gerektirir. |
+| Tesis bağlantıları | `PLANNED`. Kapı, asansör, bariyer ve turnike entegrasyonları ile bağımsız yangın paneli dinleyicisi. [Erişim sağlayıcıları](docs/product-scope.md#access-provider-roadmap) |
+| Ortak geçişler | `PLANNED`. Dar koridorda yön sırası, kapı ve asansör önünde bekleme noktaları, fiziksel kırmızı/yeşil ışık ve doğrulanmış çıkış. [Trafik senaryoları](docs/use-cases.md#traffic-queue-cases) |
+| Afetlerde arama | `PLANNED` (uzun vadeli Ar-Ge). Depremde enkaz araması ve su, sel veya taşkın için özel robotlarla operatör gözetiminde tatbikatlar. [Arama senaryoları](docs/use-cases.md#sar-exercises) |
 
 **Ürün ve teknik plan:** [Ürün kapsamı ve teknik yön](docs/product-scope.md); mevcut durum/boşluklar, modül ve komut yetkisi sınırları, edge/cloud, entegrasyon matrisi ve aşamalı MVP kabul kriterlerini içerir. Buradaki çalıştırılabilir demolar, plandaki kimlikli ve yetkilendirilmiş ürün MVP'sinin tamamlandığı anlamına gelmez. Mevcut senaryo sözleşmeleri [use-cases.md](docs/use-cases.md) içindedir.
 
@@ -203,9 +204,9 @@ Bu faydalar ürün hedefleridir. İlk müşteri segmenti, pilot tesis ve gelir m
 
 ### Entegrasyon yaklaşımı
 
-1. Uygun ve belgelenmiş bir üretici API'si varsa resmî API üzerinden bağlantı.
-2. Tesiste mevcut kontrolcü varsa cihazın belgelenmiş arayüzü üzerinden bağlantı.
-3. Uygun arayüz yoksa ve saha incelemesi desteklenebilir bir bağlantı gösteriyorsa saha donanımı, firmware ve gateway üzerinden entegrasyon.
+1. Belgelenmiş üretici API'si veya tesisin mevcut kontrolcüsü üzerinden bağlantı.
+2. Tesisin mevcut endüstriyel gateway, PLC veya I/O modülü üzerinden bağlantı.
+3. Saha ekibinin doğruladığı kontrol sinyalleri için mikrodenetleyici, izole giriş, röle ve gerektiğinde bağımsız sensör paketi.
 
 Hedef cihazlar asansörler, otomatik/kartlı kapılar, erişim sistemleri, bariyerler, turnikeler, konveyörler, fiziksel trafik ışıkları ve yangın alarmı olaylarıdır. Yürüyen bant ve yürüyen merdivenler için izleme ve rota kısıtları değerlendirilebilir; robotun bunlara binebileceği varsayılmaz. Özel kart geliştirmek ilk kurulumun önkoşulu değildir; mevcut endüstriyel gateway/I/O ürünleri uygunsa değerlendirilebilir. Marka adından cihaz tipi veya protokol çıkarılmaz; her modelin komutları, geri bildirimleri ve güvenlik sınırları dokümantasyonla doğrulanmalıdır. Her cihazın bağlanabileceği taahhüt edilmez.
 
@@ -259,8 +260,10 @@ Bunlar hazır donanım ürünleri değildir. Önce uygun endüstriyel gateway/I/
 | --- | --- |
 | İlk teknik dikey dilim | Bir simüle robot + bir simüle kapı: kimlik → yetki → kapı komutu → doğrulanmış açık kapı → geçiş izni → robotun çıkış teyidi → audit |
 | Ortak kaynak koordinasyonu | İki robot, iki kat, bir asansör ve bir kapı; kimlikli rezervasyon, bekleme ve doğrulanmış çıkıştan sonra kaynak bırakma |
+| İlk ticari pilot adayı | Tek robot, motorlu ortak giriş ve teslimat alanı. API yetkisi ve fiziksel geçiş zinciri saha kabulünü belirler. [Unloc pilotu](docs/product-scope.md#unloc-access) |
 | Sonraki ticari pilot hedefi | Bir gerçek tesis, bir robot modeli, bir asansör, bir kontrollü kapı ve iki kat arasında tekrarlanan tek bir müşteri görevi; kapsam sahadaki belgelenmiş arayüzlere göre seçilmeli |
 | Ürünleşme | Sonraki kurulumlarda daha az özel mühendislik, daha fazla adaptör/yapılandırma yeniden kullanımı; kurulu taban büyüdükçe çoklu üretici ve çok tesisli operasyon |
+| Araştırma | Asansör bekleme verisiyle görev saatini iyileştirme deneyi ve ayrı uzun vadeli arama robotu Ar-Ge hattı. [Teknik yol haritası](docs/product-scope.md#delivery-roadmap) |
 
 Pilotlarda insansız tamamlanan görev oranı, her 100 görevde müdahale sayısı ve süresi, kapı/asansör bekleme süreleri, kurulum mühendislik zamanı ve sonraki kurulumdaki yeniden kullanım ölçülmek istenir. İlk saha çalışması işlevi, sonraki kurulumlarda azalan iş yükü ürünleşme potansiyelini gösterecektir. Henüz ölçülmüş ticari başarı veya sayısal hedef iddiası yoktur.
 
@@ -272,15 +275,16 @@ Pilotlarda insansız tamamlanan görev oranı, her 100 görevde müdahale sayıs
 
 [Türkçe](#turkce) · [English](#english)
 
-When a delivery robot reaches an elevator, how does it know the car is on its floor, the door has opened, and the threshold is clear? This starter explores the decisions a robot and a building must coordinate in a hardware-free simulation. The goal is to reuse the same mission across facilities with different building systems.
+Imagine a delivery robot passing through a powered entrance and taking an elevator to another floor. The goal is to run the same mission across buildings by checking that the entrance is ready and that the assigned car is on the correct floor. Today, the door, elevator, and alarm steps can be tried as separate simulations without hardware.
 
 | Feature | Available today or planned |
 | --- | --- |
-| Robot status and stop | The simulator exposes state, speed, battery, and stop. An optional ROS 2 adapter publishes a zero-velocity command. Physical stop confirmation still requires verification. |
-| Door, elevator, and fire alarm | **Simulated.** Door opening and threshold clearance, elevator boarding and exit, cancellation on alarm, and explicit reset. |
-| Facility connections | **Planned.** Door, lift, and turnstile controllers and an independent fire panel listener. Depending on the site, a vendor API, industrial I/O, or a microcontroller and relay connected to an approved control input. [Access providers](docs/product-scope.md#access-provider-roadmap) |
-| Shared passages | **Planned.** Directional queues at narrow corridors, waiting points for doors and elevators, physical red/green indicators, and verified exit. [Traffic scenarios](docs/use-cases.md#traffic-queue-cases) |
-| Disaster search | **Future research.** Operator-led exercises with dedicated robots for earthquake rubble, water searches, and flood response. [Search scenarios](docs/use-cases.md#sar-exercises) |
+| Robot status and stop | `SIMULATED`. The UI shows connectivity, robot state, and sample battery and speed. Stop updates the simulator state. |
+| Door, elevator, and fire alarm | `SIMULATED`. Door and elevator events advance manually. An alarm cancels active passages. An explicit reset returns cancelled demos to their initial state. |
+| ROS 2 stop publication | `IMPLEMENTED_UNVERIFIED`. A local ROS 2 environment publishes a zero-velocity command. Physical stopping requires field verification. |
+| Facility connections | `PLANNED`. Door, elevator, barrier, and turnstile integrations, plus an independent fire panel listener. [Access providers](docs/product-scope.md#access-provider-roadmap) |
+| Shared passages | `PLANNED`. Directional queues at narrow corridors, waiting points for doors and elevators, physical red/green indicators, and verified exit. [Traffic scenarios](docs/use-cases.md#traffic-queue-cases) |
+| Disaster search | `PLANNED` (long-term research). Operator-led exercises with dedicated robots for earthquake rubble, water searches, and flood response. [Search scenarios](docs/use-cases.md#sar-exercises) |
 
 **Product and technical plan:** [Product scope and technical direction](docs/product-scope.md) covers the current state and gaps, module and command authority boundaries, edge/cloud responsibilities, the integration matrix, and staged MVP acceptance criteria. That detailed document is currently in Turkish. The runnable demos do not mean the planned authenticated and authorized product MVP is complete. Current scenario contracts are documented in [use-cases.md](docs/use-cases.md), also in Turkish.
 
@@ -473,9 +477,9 @@ These benefits are product goals. The first customer segment, pilot site, and re
 
 ### Integration approach
 
-1. Use the official manufacturer API when a suitable, documented API is available.
-2. Connect through an existing controller's documented interface when the site has one.
-3. Use field hardware, firmware, and a gateway when no suitable interface exists and a site assessment identifies a supportable connection.
+1. Connect through a documented manufacturer API or the site's existing controller.
+2. Connect through an existing industrial gateway, PLC, or I/O module.
+3. Use a microcontroller, isolated inputs, relays, and independent sensors as needed for control signals validated by the site team.
 
 Target equipment includes elevators, automatic/card-controlled doors, access systems, barriers, turnstiles, conveyors, physical traffic lights, and fire alarm events. Monitoring and route constraints may be evaluated for moving walkways and escalators; robots must not be assumed capable of boarding them. A custom circuit board is not a prerequisite for the first installation; existing industrial gateways and I/O products may be evaluated where suitable. Device type or protocol must not be inferred from a brand name. Commands, feedback, and safety boundaries must be verified for each model from its documentation. Support for every device is not promised.
 
@@ -529,7 +533,9 @@ These are not ready-made hardware products. Suitable industrial gateway/I/O opti
 | --- | --- |
 | First technical vertical slice | One simulated robot and one simulated door: identity → authorization → door command → confirmed open door → passage grant → robot exit confirmation → audit |
 | Shared-resource coordination | Two robots, two floors, one elevator, and one door; identity-bound reservations, waiting, and resource release after confirmed exit |
+| First commercial pilot candidate | One robot, one powered shared entrance, and a delivery area. API authorization and evidence of physical passage determine field acceptance. [Unloc pilot](docs/product-scope.md#unloc-access) |
 | Later commercial pilot target | One real site, one robot model, one elevator, one controlled door, and a single repeated customer task across two floors; scope must follow the site's documented interfaces |
 | Productization | Less custom engineering and more reusable adapters/configuration in subsequent installations; multi-manufacturer and multi-site operations as the installed base grows |
+| Research | A scheduling experiment using elevator wait data and a separate long-term search robotics program. [Technical roadmap](docs/product-scope.md#delivery-roadmap) |
 
 Pilot measurements should include the proportion of tasks completed without human intervention, intervention count and duration per 100 tasks, door/elevator waiting times, installation engineering time, and reuse in subsequent installations. The first field deployment should demonstrate functionality; reduced effort in subsequent deployments should demonstrate productization potential. No measured commercial success or numerical target is claimed yet.

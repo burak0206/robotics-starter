@@ -155,6 +155,17 @@ Workflow `CANCELLED`, robotun durduğu veya kaynağın boşaldığı anlamına g
 
 Cihaz command correlation taşımıyorsa var olmayan bir `commandId` echo'su uydurulmaz. Adaptörün onaylı taze durum okuma bariyeri veya manuel doğrulama profili kullanılır; belirsiz sonuç otomatik başarıya çevrilmez.
 
+<a id="motorized-entry-evidence"></a>
+
+Motorlu ortak giriş için örnek kanıt zinciri `PLANNED` durumundadır. Her gözlem doğru cihaz, görev adımı ve geçerli zaman aralığıyla eşleşmelidir.
+
+| Aşama | Kanıt kaynağı |
+| --- | --- |
+| Kilit açma talebi kabul edildi | Sağlayıcı veya kontrolcünün belgelenmiş yanıtı. Yanıtın yalnız alındıyı mı yoksa kilit işleminin sonucunu mu bildirdiği profilde kayıtlıdır. |
+| Kilit çözüldü | Kilidin belgelenmiş durum bilgisi, doğrulanmış işlem sonucu veya bağımsız kilit sensörü. |
+| Kanat geçişe hazır | Kapı kontrolcüsünün fiziksel konum geri bildirimi veya bağımsız açıklık sensörü. Açıklık ve varsa engel durumu yükle birlikte robotun ihtiyaç duyduğu geçiş alanına göre değerlendirilir. |
+| Eşik tamamen boşaldı | Onaylı geçiş sensörü veya taze konum ve yük geometrisi. Politikanın izin verdiği durumda yetkili operatör doğrulaması. |
+
 <a id="facility-event-pipeline"></a>
 
 ### Tesis listener'ları ve olaydan komuta akış — `PLANNED`
@@ -195,6 +206,8 @@ Hızlı kurulum, yalnız IP adresi girmekten değil önceden doğrulanmış prof
 
 `SiteDeviceBinding`; tenant/site/gateway/device kimliklerini, credential reference'ı, network veya field I/O eşlemesini, sinyal anlamı/birimini, facility resource/zone/map'i, policy/robot hedeflerini ve binding sürümünü tutar. Register/pin/polarite gibi ayrıntılar yalnız model dokümanı ve commissioning kanıtıyla girilir. Secret doğrudan profil, kural veya audit kaydına yazılmaz.
 
+Tesis eşlemesine işletimden ve bakımdan sorumlu taraf, devreye alma onayını veren rol, gereken yerel ve dış ağ hizmetleri ile her bağlantı kaybında izin verilen işlemler kaydedilir. Bağlantı ve yetki koşulları ayrı ayrı doğrulanır.
+
 Önerilen dashboard sırası:
 
 1. Cihaz türü/modeli, doğrulanmış profile/version ve destekli adapter seçilir; bilinmeyen model için önce geliştirme/doğrulama gerekir.
@@ -222,6 +235,8 @@ Yedek executor, kaynak profili izin veriyorsa salt okunur dinleyebilir; fiziksel
 Paketler standart BOM veya satışı kararlaştırılmış fiyat planı değildir. İlk sahalarda uygun endüstriyel ürünlerin kendi yazılımımız ve doğrulanmış yapılandırmayla paketlenmesi; özel kart/firmware'in tekrar eden ihtiyaç görülünce geliştirilmesi aday yaklaşımdır. Donanım, kurulum/devreye alma, yazılım lisansı ve bakım desteği ayrı ticari kalem adaylarıdır; gelir modeli doğrulanmamıştır.
 
 Tesiste otomatik kapı mekanizması veya robotun geçebileceği uygun kapı/turnike açıklığı yoksa bunu yalnız yazılım çözmez. Gerekli fiziksel ekipman üretici/bakım/kurulum ortaklarıyla sağlanabilir; sorumluluk ve saha kabulü açıkça ayrılır. Kullanılabilir bir kontrol girişi/durum çıkışı da yoksa rastgele röle yerine üretici/servis sağlayıcıyla uygun entegrasyon modülü veya ekipman dönüşümü değerlendirilir.
+
+Eksik donanım için teklif, saha keşfinden sonra gateway, uyumlu izole giriş ve röle arayüzü, bağımsız geri bildirim sensörü ve yetkili kurulum/devreye alma paketini içerebilir. Tesis ekibi kontrol sınırını ve kabul ölçütünü onaylar. İlk kabulde okuma, izinli komut, fiziksel sonuç ve bağlantı kaybı ayrı denenir.
 
 ## 5. Karar ve komut yetkisi
 
@@ -260,7 +275,7 @@ Release için ilişkilendirilmiş çıkış/clearance geri bildirimi veya politi
 
 P2'de genel bir optimizasyon motoru yerine tek-edge deterministik resource scheduler yeterlidir. Kaynak alma sırası ve geçiş planı deadlock oluşturmayacak şekilde tanımlanır; kabine girişten önce çıkış alanı/bekleme olanağı doğrulanır. İlerideki kaynağı beklemek, mevcut fiziksel kaynağı kanıtsız serbest bırakma gerekçesi değildir.
 
-**Kapı, asansör ve dar koridor kuyruğu (`PLANNED`).** İlk simülasyonda aynı öncelikteki istekler geliş sırasıyla işlenir. Karşılıklı tek şeritli koridorun iki ucu aynı rezervasyonu paylaşır. Kapı eşiğinin ve asansör çıkışının dışında tanımlı bekleme noktası doluysa robot sıraya uzaktan alınır. Kırmızı/yeşil saha lambası mevcut izni gösterir. Geçiş için ayrıca doğru robota güncel izin ve doğrulanmış boş alan gerekir. Lamba geri bildirimi izinle çelişirse yeni giriş bekletilir; içerideki robotun doluluğu korunur. Open-RMF’nin `traffic_light` adaptörü filo için duraklat/devam komutlarını modeller. Fiziksel lamba kendi cihaz profilini gerektirir. [Open-RMF demoları](https://github.com/open-rmf/rmf_demos/blob/main/README.md) · [Kuyruk ve sinyal kabul senaryoları](use-cases.md#traffic-queue-cases).
+**Kapı, asansör ve dar koridor kuyruğu (`PLANNED`).** İlk simülasyonda aynı öncelikteki istekler geliş sırasıyla işlenir. Karşılıklı tek şeritli koridorun iki ucu aynı rezervasyonu paylaşır. Kapı eşiğinin ve asansör çıkışının dışında tanımlı bekleme noktası doluysa robot sıraya uzaktan alınır. Robotun giriş izni, fiziksel doluluk, lambaya gönderilen komut ve gözlenen lamba durumu ayrı kaydedilir. Lamba teyidi gereken profilde karşıt yönlere yeşil görünürse veya gözlem izinle çelişirse yeni giriş bekletilir ve mevcut doluluk korunur. Open-RMF'nin `EasyTrafficLight` arayüzü, robotun rota noktalarında bekleme ve devam etme kararlarını filo entegrasyonuna iletir. Fiziksel lamba kendi cihaz profilini gerektirir. [Open-RMF demoları](https://github.com/open-rmf/rmf_demos/blob/main/README.md) · [EasyTrafficLight 2.7.2](https://github.com/open-rmf/rmf_ros2/blob/2.7.2/rmf_fleet_adapter/include/rmf_fleet_adapter/agv/EasyTrafficLight.hpp) · [Kuyruk ve sinyal kabul senaryoları](use-cases.md#traffic-queue-cases).
 
 Trafik kayıtları ileride görev zamanlamasını iyileştirmek için de kullanılabilir (`PLANNED`). Örneğin bir temizlik görevinin başlangıcı esnekse, geçmiş asansör beklemelerinden beş dakika erken başlamanın yararını tahmin et. Önce geçmiş günlerle eğitip sonraki günlerde sabit saatli planla karşılaştır. Görevin zamanında bitme oranını, asansör bekleme süresini ve diğer robotların kuyruğuna etkisini birlikte ölç. Modelin önerisi, aynı erişim penceresi ve trafik kuralları içinde planlayıcı tarafından değerlendirilir.
 
@@ -326,7 +341,7 @@ Politika/prosedür eksik veya alarm güven durumu belirsizse etkilenen alana yen
 
 Bugünkü sabit `CANCELLED` demo davranışı bir `SiteEmergencyPolicy` uygulaması değildir; regresyon simülasyonu olarak korunur. `ResetCancelledSimulations` sanal robot/doluluk verisini değiştirir ve **üretimde fiziksel recovery endpoint'i olarak kullanılamaz**. Hedefte alarm clear ile fiziksel clearance ayrı yetkili kanıtlar gerektirir.
 
-Doğrudan dinleme için sahada panelin yetkili olay arayüzü, varsa bu olayları taşıyan BMS veya panelin onaylı izleme çıkışını okuyan saha girişi seçilir. Yalnız genel alarm kontağı sunuluyorsa kaynak bilgisi tesis düzeyinde kalır. İlk bağlantı ve yeniden bağlantıda mevcut alarm durumu doğrulanır. Ticari örnek olarak MiRGo'da yayımlanan AI Automation modülü, alarm sinyalini MiR Fleet'teki önceden tanımlı bölgelerden çekilme davranışına bağlar. Yerel ürün profili ve robotun kapı eşiğinde, kuyrukta veya kabinde oluşu bizim tatbikatlarımızda ayrı girdilerdir. [AI Automation modülünün MiRGo kaydı](https://mobile-industrial-robots.com/products/mir-go/ai-automation-ai-smart-fire-alarm-module) · [Alarm tatbikatı](use-cases.md#emergency-drill).
+Doğrudan dinleme için sahada panelin yetkili olay arayüzü, varsa bu olayları taşıyan BMS veya panelin onaylı izleme çıkışını okuyan saha girişi seçilir. Yalnız genel alarm kontağı sunuluyorsa kaynak bilgisi tesis düzeyinde kalır. İlk bağlantı ve yeniden bağlantıda [listener profilindeki](#facility-event-pipeline) kaynak sağlığı, zaman ve mevcut alarm durumu doğrulanır. MiRGo'daki AI Automation iş ortağı ürün kaydı, alarm sinyalinin MiR Fleet'te önceden tanımlı bölgelerden çekilmeyi tetiklediğini bildiriyor. Kapı eşiği, bekleme noktası ve kabin için seçilen eylem tesis prosedürüne bağlıdır. [AI Automation modülünün MiRGo kaydı](https://mobile-industrial-robots.com/products/mir-go/ai-automation-ai-smart-fire-alarm-module) · [Alarm tatbikatları](use-cases.md#traffic-queue-cases).
 
 <a id="emergency-robot-coordination"></a>
 
@@ -382,7 +397,7 @@ Uzun vadeli ürün hedefi, müdahale ekibiyle birlikte göreve uygun **arama rob
 | Dayanıklı command/task journal, deduplication, yerel audit outbox | Fleet-wide izleme, audit toplama ve yönetim arayüzleri |
 | Bağlantı ve restart sonrası yerel reconciliation | Edge capability/health/deployment sonucunu izleme |
 
-Cloud bir hareket command writer'ı olmaz. Cloud'dan gelen görev isteği, edge'in yeniden yetkilendirdiği süreli bir `TaskIntent` olur. Cloud storage veya bağlantının varlığı fiziksel döngünün her adımı için şart yapılmaz.
+Yönetim düzlemi müşteri tercihine göre cloud veya on-prem kurulabilir. Yerel edge yürütme, kaynak başına tek komut sahibi, kimlik ve denetim kuralları iki modelde de aynıdır. Yönetim düzleminden gelen görev isteği, edge'in yeniden yetkilendirdiği süreli bir `TaskIntent` olur. Yerel işlevlerin kesintide devamı geçerli politika, fiziksel gözlem ve seçilen sağlayıcının bağlantı ihtiyacına bağlıdır.
 
 ### İnternet kesintisi kararı
 
@@ -402,7 +417,7 @@ Offline edge, cloud'daki yeni credential iptalini anında bilemez. Offline izin,
 
 ## 10. Entegrasyon matrisi ve doğrulanmış sürüm sınırları
 
-Bu bölümdeki kaynaklar **2026-11-10 tarihinde incelenmiş referanslardır**. Seçilmiş robot/cihaz olmadığı için saha compatibility profile'ı onaylanmış değildir. Bir adaptör sürümü, schema revision'ı ve cihaz firmware'i birlikte pinlenir; `latest` etiketiyle uyumluluk taahhüt edilmez.
+Robot protokolü ve sürüm referanslarının temel inceleme tarihi **2026-11-10**. Erişim sağlayıcıları ve saha örnekleri **2026-11-19** tarihinde yeniden kontrol edildi. Saha onayı, seçilen adaptör sürümü, şema ve cihaz firmware'ine göre verilir.
 
 ### Robot ve koordinasyon entegrasyonları
 
@@ -428,12 +443,12 @@ Bu bölümdeki kaynaklar **2026-11-10 tarihinde incelenmiş referanslardır**. S
 
 | Cihaz/teknoloji | Amaç | Doküman/karar için gereken bilgi | Mevcut destek |
 | --- | --- | --- | --- |
-| Resmî üretici API'si | Üreticinin desteklediği command ve feedback | Tam model/firmware, API revision/lisans, auth, command ACK/result, hata ve interlock davranışı | `PLANNED`; API/endpoint bilinmiyor |
-| Mevcut kontrolcü | Belgelenmiş mevcut arayüz üzerinden komut ve durum | Model, wiring/topoloji, protocol manual, erişim izni, read/write listesi ve feedback kanıtı | `PLANNED` |
-| Özel saha donanımı + firmware + gateway | Uygun arayüz yokken onaylı sinyal sınırını kurmak | Elektriksel I/O tipi/seviyesi, izolasyon, interlock, watchdog/fail state, feedback kaynağı, firmware/update ve saha test planı | `PLANNED`; kart/firmware tasarımı yok |
-| Asansör | Çağırma, seçili kat, door/floor/cabin durumu | OEM/servis sağlayıcı arayüzü, kat kodları, erişim/yangın işletimi, session authority | Yalnız `SIMULATED` |
-| Otomatik kapı/erişim sistemi | Açılma isteği, access decision ve açık/kapalı/engel feedback | Kapı + kontrolcü + access controller modeli, belgelenmiş izinli sinyaller, sensörler | Yalnız `SIMULATED` |
-| Bariyer/turnike/robot geçiş kapısı | Yetkili giriş ve passage/clearance takibi | Açıklık, robot/yük footprint'i, detection, izinli hareket ve bağımsız physical feedback | `PLANNED`; insan sensörü robotu algılıyor varsayılmaz |
+| Belgelenmiş üretici API'si veya müşterinin yerel kontrolcüsü | Desteklenen komut ve durum arayüzü üzerinden bağlanmak | Model/firmware, API/protokol ve lisans, kimlik, izinli komutlar, okunabilen durumlar, hata ve interlock davranışı | `PLANNED` |
+| Mevcut endüstriyel gateway, PLC veya I/O modülü | Tesisin onayladığı ağ veya saha sinyallerini kullanmak | Modül/topoloji, bağlantı dokümanı, sinyal anlamı, izinli I/O ve bağımsız fiziksel geri bildirim | `PLANNED` |
+| Mikrodenetleyici ve saha arayüzü paketi | Onaylı kontrol girişlerine ve durum çıkışlarına izole giriş/röle ve gerekirse bağımsız sensörle bağlanmak | Elektriksel I/O tipi, izolasyon, interlock, bağlantı kaybındaki durum, sensör ve saha test planı. Seçimi yetkili saha ekibi doğrular | `PLANNED` |
+| Asansör | Çağırma, seçili kat, kapı/kat/kabin durumu | OEM/servis sağlayıcı arayüzü, tahsis edilen asansör ve kabin kimliği, kat kodları, erişim/yangın işletimi, oturum yetkisi | Yalnız `SIMULATED` |
+| Kartlı veya motorlu kapı | Erişim kararı, kilit açma, kanat/engel ve geçiş gözlemi | Kilit, kapı açıcı ve kontrolcü profili, izinli sinyaller ve bağımsız sensörler. [Motorlu giriş kanıt zinciri](#motorized-entry-evidence) | Yalnız `SIMULATED` |
+| Bariyer/turnike/robot geçiş kapısı | Yetkili giriş ve geçişin tamamlanmasını takip etmek | İzinli şerit yönü, gerçek açıklık, robot ve yük geometrisi, algılama ve bağımsız fiziksel geri bildirim | `PLANNED` |
 | Yolcu yürüyen bandı/yürüyen merdiven | İlk etapta observe-only durum ve rota kısıtları | Ekipman/model, durum semantiği, no-go/route enforcement; binme için ayrıca robot–ekipman doğrulaması | `PLANNED`; boarding/control varsayılan `UNSUPPORTED` |
 | Endüstriyel konveyör | Robotla yük teslim alma/verme ve transfer handshake | Yön, hazır/meşgul/başladı/tamamlandı anlamları, yük/robot hizası ve ayrı transfer/clearance feedback | `PLANNED`; üretici bit/register veya pulse süresi seçilmedi |
 | Fiziksel trafik ışığı | Ortak geçiş için gösterge/control state | Lamba değil kontrolcünün modeli, renk/izin anlamı, feedback ve bağlantı kaybı davranışı | `PLANNED` |
@@ -450,6 +465,8 @@ Bu bölümdeki kaynaklar **2026-11-10 tarihinde incelenmiş referanslardır**. S
 | Dijital I/O | Onaylı giriş/çıkış sinyallerini okuyup sürmek | Dry contact/gerilim tipi, izolasyon/polarite, pulse/level, debounce, feedback ve fail state | `PLANNED`; pin/elektriksel davranış bilinmiyor |
 
 Bir cihazın açma çıkışını sürmek, açık sensörü okuyabildiğimiz anlamına gelmez. Okuma ve yazma farklı arayüzlerden yapılacaksa observation fusion ve sole-writer sınırı açıkça tanımlanır. Belgelenmeyen register, endpoint, topic, röle polaritesi veya alarm reset davranışı eklenmez. Bilinmeyen yerler yalnızca etiketli simulator ve `CapabilityProfile`/adapter port'larıyla temsil edilir.
+
+KONE Service Robot API, asansör çağrısı ve atanmış asansörün kat, yön, kapı ve çağrı durumunu WebSocket üzerinden belgeleyen bir üretici örneğidir. Hedef binanın aboneliği ve donanımı, kabin eşlemesi, bağlantı kaybı, yangın işletimi ve robotun çıkış kanıtı saha keşfinde doğrulanır. Repo durumu `PLANNED`. [KONE Service Robot API](https://dev.kone.com/api-portal/service-robot-api).
 
 **2026-11-11 tarihli aday kaynak kontrolü:** [Bosch'un resmî AVENAR ürün sayfası](https://www.boschbuildingtechnologies.com/lifesafetysystems/en/products/fire-alarm-control-panels/), sisteme göre FSI server, OPC veya BACnet server seçeneklerini belirtir; her panelde aynı native API olduğu çıkarılamaz. [16 Ocak 2025 tarihli BACnet server V1.0 teknik bilgisi](https://media.boschsecurity.com/fs/media/pb/media/extranet/fire_alarm_system/tech_info_en/2624_2024_TI_EN_AVENAR_BACnet_server_V1.0.pdf) belirli firmware/RPS/OS/lisans profili tarif eder ve o sürümde BMS'den panele komut göndermeyi desteklemez. Dolayısıyla bu belge kontrol değil **read-only alarm/state listener adayı** için kanıttır; en yeni saha BOM'u seçimi değildir.
 
@@ -563,12 +580,13 @@ Bu sorular kod yazarak veya mevcut motor gözleminden sonuç çıkararak kapatı
 
 Her tesis için desteklenen arayüz ve cihaz profili seçilir. Platform görev, robot kimliği, zaman penceresi, kaynak ve hareket yetkisini yönetir. Sağlayıcıya ait komutlar ve geri bildirim [cihaz profiline](#device-profiles) bağlanır ve `BuildingResourcePort` üzerinden değerlendirilir. Rezervasyon veya erişim olayı, anlamı ve kapsamı doğrulandığında görev planına ya da tesis olay hattına girdi olabilir. Aktif görev ve kaynak yetkisi, komut öncesinde platform tarafından ayrıca doğrulanır. Kabul edilen işlem, kilidin çözülmesi, kapı kanadının geçişe uygun açıklığı ve robotun çıkışı ayrı kanıtlarla izlenir.
 
-| Öncelik | Aday ve ürün rolü | İlk doğrulama |
-| --- | --- | --- |
-| İlk pilot adayı | **Unloc** ile tek robot, tek giriş ve ortak teslimat alanı | Hedef girişte yetkili online API ve fiziksel geçiş zinciri. [Unloc pilotu](#unloc-access) |
-| İkinci teknik aday | **Nuki** ile yerel kilit komutu ve durum okuma | Tek uyumlu model/firmware, yerel ağ güvenliği, komut yetkisi, açıcı ve bağımsız fiziksel geri bildirim. WAN kesintisi ve yerel broker kaybı ayrı denenir |
-| Ofis keşfi | **Awaio** ile kullanım/rezervasyon bilgisine göre görev zamanlama. Fiziksel erişim ikinci keşif hattı | Yetkili rezervasyon verisi ve güncelliği, makineden makineye komut/olay arayüzü ve kontrolcüden geri bildirim |
-| Kurumsal erişim keşfi | **Amido Access / DAX** ile müşterinin mevcut erişim sistemine bağlanma ve görevle sınırlı geçici izin | Sözleşme ve yazılı API onayı, kurulum tipi, bağlı sistem/model/sürüm, robot kimliğinin sağlayıcı tarafındaki temsili ve izin sonlandırma davranışı |
+| Aday ve ürün rolü | Sağlayıcının belgelediği yetenek | Hedef tesiste doğrulanacak | Repo durumu | Birincil kaynak |
+| --- | --- | --- | --- | --- |
+| **Unloc**, ilk teslimat pilotu | İzinli çevrimiçi kilitlerde `Operate Lock`. Projede ilgili modül ve yetki gerekiyor. | Tek robot, motorlu ortak giriş ve teslimat alanı. Binada motorlu açılma gözlendi. Seçili kilitte API yetkisi, API işlemiyle motorun tetiklenmesi ve [geçiş kanıtı](#motorized-entry-evidence) ayrı doğrulanır. | `PLANNED`. Sağlayıcıya özel uygulama yok. [Pilot ayrıntıları](#unloc-access) | [Online Locks](https://developer.unloc.app/docs/opening-ip-locks-with-api), [Operate Lock](https://developer.unloc.app/reference/operatelock) |
+| **Nuki**, yerel bağlantı adayı | Uyumlu cihazda yerel MQTT veya Bridge HTTP. Nuki Web ayrı çevrimiçi API. | Model, firmware, komut yetkisi, açıcı ve bağımsız geri bildirim. WAN kesintisi ve yerel ağ/broker kaybı ayrı denenir. | `PLANNED`. Sağlayıcıya özel uygulama yok. | [MQTT](https://help.nuki.io/hc/en-001/articles/12947926779409-MQTT-integration), [Bridge](https://developer.nuki.io/t/bridge-http-api/26), [Web](https://docs.nuki.io/guide/overview/concepts/) |
+| **Awaio**, ofis görevleri keşfi | Rezervasyon entegrasyonları ve Smart Access Box için mobil erişim ile dört röle çıkışı. | Yetkili rezervasyon verisi, robot servis hesabı, makineden makineye komut ve kontrolcüden bağımsız fiziksel geri bildirim. | `PLANNED`. Sağlayıcıya özel uygulama yok. | [Entegrasyonlar](https://awaio.com/resources/integrations), [Smart Access Box](https://awaio.com/product/mobile-access-box) |
+| **Amido Access / DAX**, kurumsal erişim keşfi | Amido Access için yerel veya bulut kurulum. DAX belgelerinde yetkili iş ortakları için geçici izin ve geri alma örnekleri. | Sözleşme, API onayı, bina ve zaman kapsamı, bağlı kontrolcü ve geri alma sonucu. Yerel Amido Access kurulumu için DAX dış bağlantısı ayrı doğrulanır. | `PLANNED`. Sağlayıcıya özel uygulama yok. | [Amido Access](https://www.amido.se/produkter/amido-access), [DAX akışları](https://dax-docs.amido.se/usecases/), [DAX bağlantısı](https://dax-docs.amido.se/connectivity/) |
+| **Smart Passage**, müdahale erişimi referansı | İsveç'te yetkili müdahale ekibine olay ve adresle sınırlı erişim. | Robotun teslimat izni bina politikasından gelir. Yangın alarmı için yetkili tesis kaynağı ayrı seçilir. | Ürün referansı. Repo entegrasyonu yok. | [Smart Passage](https://www.amido.se/produkter/smart-passage) |
 
 Nuki, Awaio ve Amido için repo durumu `PLANNED`. Sağlayıcıya özel adaptör, simülatör veya saha doğrulaması henüz yok. Senaryolar ortak geçiş akışını kullanır. [Kullanım senaryoları](use-cases.md#access-provider-cases).
 
@@ -612,6 +630,8 @@ Kaynaklar: [Device auth](https://docs.aws.amazon.com/greengrass/v2/developerguid
 
 AWS'nin client offline authentication cache'i ürün policy/grant TTL'sinden ayrıdır. Cloud'daki revocation offline edge'e anında ulaşmaz; AWS cache ayarı uygulama seviyesinde sınırsız offline yetki vermez. [Offline authentication](https://docs.aws.amazon.com/greengrass/v2/developerguide/offline-authentication.html).
 
+<a id="delivery-roadmap"></a>
+
 ## 12. Aşamalar ve somut kabul kriterleri
 
 Her aşama bir önceki güven sınırını korur. P0 dışındakiler **plan** durumundadır. Simülasyon testi ile model/firmware/site bazlı saha doğrulaması ayrı raporlanır.
@@ -626,6 +646,8 @@ Her aşama bir önceki güven sınırını korur. P0 dışındakiler **plan** du
 | `P5 — AdditionalProfiles` | İhtiyaca göre robot protokol profilleri, fiziksel traffic light/bariyer/turnike, conveyor transfer; passenger equipment için observe-only rota kısıtları | Her yeni profil için versioned read/write/notification capabilities, geometry/feedback, authority ve conformance kanıtı; doğrulanmamış boarding/komut `UNSUPPORTED` |
 
 Güvenlik ilk kez P4'te eklenmez: P1'de identity/policy/audit, P2'de authority/fencing/reservation, **P3 saha öncesinde** gerçek enrollment, desteklenen bağlantılarda mTLS, rotation/revocation ve site izolasyonu gereklidir. Greengrass'ın otomatik merkezi rollout'u ayrı aşamadır.
+
+İlk ticari pilot adayı P3'te tek robot ve motorlu ortak girişten teslimat akışıdır. Hedef bina izinleri ve fiziksel kanıt zinciri belirleyicidir. Asansör bekleme verisiyle beş dakikalık zamanlama önerisi, karşılaştırılabilir geçmiş veriler biriktiğinde sonraki araştırma aşamasında ölçülecektir. Özel arama robotları ayrı uzun vadeli Ar-Ge hattıdır. [Unloc pilotu](#unloc-access) · [Arama robotu Ar-Ge’si](#search-robot-rd).
 
 ### P1 kabul kriterleri
 
@@ -643,7 +665,7 @@ Güvenlik ilk kez P4'te eklenmez: P1'de identity/policy/audit, P2'de authority/f
 İki robot için rota: izinli bekleme noktası → kaynak talebi → asansör çağrısı → doğru kat + açık kapı kanıtı → robotun kabine girişi → hedef kat komutu → doğru hedef kat + açık kapı kanıtı → çıkış → kaynak release → kapı geçişi.
 
 - Aynı anda iki talep transaction altında tek holder üretir; diğeri izinli wait point'te bekler. Queue priority/aging davranışı deterministik test edilir.
-- Yanlış kat, kapı kapalı, kalibrasyonu eksik map veya başka robota ait feedback giriş/çıkış adımını ilerletmez. Robotun route constraints'i uygulanamıyorsa görev reddedilir.
+- Yanlış kat, başka kabinden gelen açık kapı gözlemi, kapalı kapı, kalibrasyonu eksik harita veya başka robota ait geri bildirim giriş/çıkış adımını ilerletmez. Biniş ve iniş için atanmış kabin kimliği, doğru kat ve taze kapı gözlemi eşleşir. Robotun rota kısıtları uygulanamıyorsa görev reddedilir.
 - Görev sırasında map/transform sürümü değişirse eski sürüme bağlı queued goal için adapter dispatch count sıfırdır; yeniden planlama/uzlaştırma gerekir.
 - Kabin/çıkış teyidi kaybolursa asansör/egress kaynağı bloke kalır; lease timeout ikinci robota grant vermez. Operatörün verified clearance işlemi actor/evidence ile audit edilir.
 - Alarm veya iletişim kaybında site procedure uygulanır; kaynağın serbestliği ve robotun durduğu uydurulmaz. Alarm clear otomatik resume oluşturmaz.

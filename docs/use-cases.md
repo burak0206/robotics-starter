@@ -132,6 +132,8 @@ Bu bölümdeki İngilizce case ve olay adları **dokümantasyon kimlikleridir**;
 | `SiteCommissioning` | Kurulum profilini kur, test et ve onaylı sürüm olarak yayımla | Cihaz/robot yetenekleri kanıtlanır; serbest güvenlik kuralı editörü değildir |
 | [`EmergencyCoordinationDrill`](#emergency-drill) | İki robot/bölgede alarm, geçiş kısıtı ve bağlantı kaybını birlikte değerlendir | Yalnız planlanan tatbikat; mevcut sabit alarm demo'su veya gerçek afet uygunluğu değildir |
 | [Erişim sağlayıcısı adayları](#access-provider-cases) | Nuki yerel erişim, Awaio rezervasyon ve Amido görev kapsamlı erişim senaryoları | `PLANNED`. Sağlayıcı arayüzü ve fiziksel geri bildirim tesise göre doğrulanır |
+| [Geçiş sırası ve fiziksel ışık](#traffic-queue-cases) | İki robotun dar koridoru, kapıyı, asansörü veya uygun turnike şeridini paylaşması | Bekleme sırası, kaynağa giriş izni ve fiziksel doluluk ayrı izlenir |
+| [Su, sel ve deprem arama tatbikatları](#sar-exercises) | Uzman aracın topladığı gözlemleri konum ve belirsizlikleriyle müdahale ekibine aktarmak | Gelecek Ar-Ge kapsamı. İlk çalışma izole simülasyon ve kayıt oynatımıdır |
 
 ### `FacilityAlarmResponse`: bağımsız kaynak, tesis politikası, robot tepkisi
 
@@ -187,7 +189,23 @@ Bu kontroller gelecek implementasyon ve saha profili içindir; mevcut testlerin 
 | Konveyör el sıkışması ve timeout | `BUSY` yeni aktarımı engeller; sensör kanıtı olmadan tamamlandı olmaz; ACK kaybı, timeout veya eksik clearance doluluğu ve kaynak tutmayı kaldırmaz |
 | Devreye alma/yayımlama | Salt okunur ve kontrollü test kanıtları doğru profile bağlıdır; yetkisiz/onaysız sürüm etkinleşmez, yayımlayan aktör/sürüm/onay/test sonucu audit'te bulunur; yayımlama anlık fiziksel hareket başlatmaz |
 
-Fiziksel geçiş ışığı ve robot trafik koordinasyonundaki “Traffic Light” ayrı konulardır. Hangi kontrolcü ve saha senaryosunun hedeflendiği ayrıca netleştirilecek; bu plan bunlar için protokol veya cihaz desteği ilan etmez.
+Planlanan fiziksel ışık ve geçiş sırası tatbikatları aşağıdadır. Işığın kontrolcüsü, geri bildirimi ve robotlara hangi kaynağın giriş izni verdiği saha profilinde belirlenir.
+
+<a id="traffic-queue-cases"></a>
+
+### Geçiş sırası, dar koridor ve fiziksel trafik ışığı — `PLANNED`
+
+İzole tatbikatta iki robot, iki bekleme noktası, kontrollü saat ve giriş/çıkış gözlemleri kullanılır. Görev koordinatörü sırayı tutar. Robotun mevcut komut sahibi hareketi yürütür. İsteğe bağlı kırmızı/yeşil saha lambası operatöre ve geçişi paylaşanlara görünür durum verir. İzin kararı, lambaya gönderilen komut, gözlenen lamba durumu ve robotun geçişi olay kaydında ayrı yer alır. Open-RMF'nin yazılımsal [EasyTrafficLight](https://github.com/open-rmf/rmf_ros2/blob/2.7.2/rmf_fleet_adapter/include/rmf_fleet_adapter/agv/EasyTrafficLight.hpp) arayüzü robotu bekletme ve devam ettirme için bir entegrasyon adayıdır.
+
+| Senaryo | Tatbikat girdisi ve beklenen akış | Kabul için gözlenecek sonuç |
+| --- | --- | --- |
+| TR-01 · Karşılıklı dar koridor | A ve B karşı uçlardan aynı anda talep eder. Eşit öncelikte sıra, koordinatörün kayda aldığı geliş sırasına göre belirlenir. A'nın girişi doğrulanınca çıkış algısını kes ve lease'i bitir. Bağımsız çıkış teyidini daha sonra ver. | Aynı anda en fazla bir giriş izni vardır. Teyit beklenirken B'ye giriş komutu sayısı sıfırdır. A'nın tam çıkışı doğrulanınca B'nin hâlâ geçerli isteği bir kez işleme alınır. |
+| TR-02 · Fiziksel sinyal arızası | Işık teyidi gerektiren saha profilinde A için izin kararı verildikten sonra lambanın okunan durumunu eski, çelişkili veya bilinmiyor yap. Aynı sinyal komutunu tekrarlayan olay ve gateway yeniden başlatma varyantlarını çalıştır. | Zıt yönlere eşzamanlı geçiş izni verilmez. Çelişki operatörde görünür, doğrulanmamış sinyalle yeni giriş dispatch'i sıfır kalır. Tekrar başlatma sonrası kaynak sahibi, fiziksel doluluk ve lamba durumu uzlaştırılır. |
+| TR-03 · Kapı ve asansör sırası | İki robot onaylı bekleme noktalarında sıralanır. İlk varyantta sıranın başındaki görevi girişten önce iptal et. İkincisinde robot kabindeyken diğer robot için çağrı isteği ve ilk robot için gecikmiş varış olayı üret. | İptal edilen bekleyene komut gönderilmez. Sıradaki robotun yetkisi yeniden denetlenir. Kabin tahsisi, doğru kat, açık kapı ve doğrulanmış kabin çıkışı ayrı kaydedilir. Gecikmiş olay ikinci robota biniş izni vermez. |
+| TR-04 · Turnike veya erişilebilir geniş geçit | Yüklü robotun ölçülerini ve şerit yönünü profil ile karşılaştır. Dar şerit ve uygun geniş şerit varyantlarını dene. Geniş şeritte açma isteği kabul edildikten sonra açılma/çıkış teyidini ayrı ayrı geciktir. | Uygun olmayan şerit için açma komutu sayısı sıfırdır. Uygun şeritte tek robot geçer. Röle ACK'inden sonra kanatların geçişe hazır olduğu, kaynak bırakılmadan önce yükün arka ucunun da çıktığı gösterilir. |
+| TR-05 · Sıra varken yangın ve listener kaybı | A eşikte, B sıradayken onaylı panel arayüzünden veya tahsisli alarm girişinden bölgesel alarm enjekte et. Aynı aktivasyonu tekrar gönder, bağlantıyı kes, eski temizleme olayını teslim et. Güncel panel durumu döndükten sonra tatbikat sorumlusunun normale dönüş kararını uygula. | Fixture'da kısıtlanan bölgeye yeni giriş sıfır, tekrar olayından doğan fazladan komut sıfırdır. A'nın doluluğu ve son konum zamanı görünür kalır. Kaynak arızası veya tek başına temizleme olayı B'yi ilerletmez. [İki robotlu alarm tatbikatı](#emergency-drill). |
+
+Sıra deneyinde her robotun talep, izin ve çıkış zamanlarını kaydet. Beklerken iptal, tesis prosedüründeki öncelikli talep ve uzun bekleme uyarısı ayrı varyantlardır. Öncelik değişikliği, içerideki robota verilmiş geçişi başka robota devretmez. Bekleme noktaları saha planında kaçış yollarını ve insan geçişini açık tutacak şekilde seçilir.
 
 <a id="unloc-delivery"></a>
 
@@ -334,6 +352,20 @@ Hastane için planlanan operatör görünümü, etkilenen bölgeleri, görevleri
 | Su baskını veya gaz alarmı | Kaynak verisi ve etkilenen bölge doğrulanır. Ortam uygunluğu kanıtlanmayan robotun yeni görevi reddedilir. Bölgedeki robotun davranışını tesis prosedürü ve desteklenen eylemler belirler. |
 | Müdahale ekibine malzeme taşıma | Yetkili ekip teslim noktasını ve onaylı güzergâhı belirler. Robot ve yük profili görevle eşleşirse görev yürütülür. Teslim sonucu ve robotun dönüşü ayrı izlenir. |
 | Uzaktan keşif, ölçüm ve arama desteği | Uygun robot ve operatörle toplanan gözlemler konum, zaman ve veri kalitesiyle ekibe gösterilir. Eski veya konumsuz ölçümler belirsiz olarak işaretlenir. Rota ve yeniden kullanım kararı yetkili ekipte kalır. |
+
+<a id="sar-exercises"></a>
+
+### Su, sel/taşkın ve deprem için arama robotu tatbikatları — `PLANNED` (Ar-Ge)
+
+Gelecekte uzman arama robotları ayrı bir ürüne dönüşebilir. İlk tatbikatta müdahale sorumlusu arama sektörünü ve görevi seçer, eğitimli operatör o ortama uygun araç profilini denetler. Simüle sensör kayıtları gözleme dönüşür. Ekip, gözlemin konumunu, zamanını, belirsizliğini ve inceleme durumunu aynı kayıtta görür. Bu çalışma, bina içindeki hizmet robotlarının [olaya verdiği tepkiyi](#emergency-drill) tamamlar.
+
+| Arama görevi | Tatbikatta üretilecek olay | Kabul ölçütü |
+| --- | --- | --- |
+| SAR-01 · Su yüzeyinde arama | Yüzey aracı için yetkili operatörün seçtiği arama alanında aynı nesneyi gösteren iki görüntü üret. İkinci görüntünün konum kalitesini düşür. | Her görüntü kaynak/zaman/konum kalitesiyle izlenir. Olası aynı hedef ilişkisi korunur. İnsan incelemesine kadar teyit edilmiş kişi sayısı sıfırdır. |
+| SAR-02 · Sel veya taşkında keşif | Su yükseldiğinde bir arama sektörünü kısıtla. Sektör görevini sıradan teslimat robotuna ve ardından uygunluğu belgelenmiş uzman araç profiline sun. Uzman araçla bağlantıyı tatbikat sırasında kes. | Ortam profiline uymayan robota dispatch sıfırdır. Kapsanan alan ile henüz taranmamış alan ayrı gösterilir. Bağlantı kesilince ekip son konumun zamanını ve görevin belirsiz sonucunu görür. |
+| SAR-03 · Deprem sonrası enkazda arama | Yetkili ekipçe seçilmiş sektörde uzman kara aracından zaman damgalı kamera veya akustik gözlem enjekte et. Yaklaşım yolunu kapat, aynı gözlemi tekrar gönder ve son konumu belirsizleştir. | Kısıtlı rotaya yeni hareket komutu sıfırdır. Tek delilin tekrarı ikinci bulgu oluşturmaz. Operatör aday bulguyu kayıtla birlikte inceleyebilir. Yapısal güvenlik ve canlı teyidi yetkili ekibin değerlendirmesini gerektirir. |
+
+Tatbikat raporunda gözlemden operatör incelemesine kadar geçen süreyi, kapsanan/taranmamış sektörleri, doğrulanamayan bulguları ve temas kaybının süresini göster. Gerçek cihaz ve operatör yeterliliği ileride ayrıca doğrulanır.
 
 <a id="door-security-tests"></a>
 

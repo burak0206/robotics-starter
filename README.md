@@ -4,7 +4,15 @@
 
 # Robot–bina entegrasyonu başlangıç projesi
 
-Robotların kapılar, asansörler ve bina olaylarıyla birlikte çalışacağı senaryolar için küçük bir başlangıç. **Asansör çağırma ve kat seçimi**, **elektronik kapı geçişi** ve **yangın alarmında geçişlerin iptali** case'lerini içerir; mevcut robot durum ekranı ve **durdur** komutu da korunur. Donanım gerektirmeden simülasyonla açılır.
+Bir teslimat robotu asansöre geldiğinde kabinin doğru katta olduğunu, kapının açıldığını ve geçiş yolunun boş olduğunu nasıl bilir? Bu proje, robot ile binanın birlikte vermesi gereken kararları donanım gerektirmeyen bir simülasyonda inceler. Hedef, farklı tesislerde aynı görevi mevcut bina sistemlerine bağlayabilmektir.
+
+| Özellik | Bugün deneyebileceğin veya planlanan kapsam |
+| --- | --- |
+| Robot durumu ve durdurma | Simülatörde durum, hız, pil ve durdurma. İsteğe bağlı ROS 2 adaptörü sıfır hız komutu yayınlar. Fiziksel duruş teyidi açık bir doğrulama adımıdır. |
+| Kapı, asansör ve yangın alarmı | **Simülasyon.** Kapının açılması ve eşiğin boşalması, kabine giriş ve çıkış, alarmda iptal ve açık bir sıfırlama adımı. |
+| Tesis bağlantıları | **Plan.** Kapı/asansör/turnike kontrolcüleri ve bağımsız yangın paneli dinleyicisi. Tesise göre üretici API’si, endüstriyel I/O veya onaylı kontrol girişine bağlanan mikrodenetleyici/röle profili. [Erişim sağlayıcıları](docs/product-scope.md#access-provider-roadmap) |
+| Ortak geçişler | **Plan.** Dar koridorda yön sırası, kapı ve asansör önünde bekleme noktaları, fiziksel kırmızı/yeşil ışık ve doğrulanmış çıkış. [Trafik senaryoları](docs/use-cases.md#traffic-queue-cases) |
+| Afetlerde arama | **Gelecek Ar-Ge.** Depremde enkaz araması ve su/sel/taşkında arama için özel robotlarla operatör gözetiminde tatbikatlar. [Arama senaryoları](docs/use-cases.md#sar-exercises) |
 
 **Ürün ve teknik plan:** [Ürün kapsamı ve teknik yön](docs/product-scope.md); mevcut durum/boşluklar, modül ve komut yetkisi sınırları, edge/cloud, entegrasyon matrisi ve aşamalı MVP kabul kriterlerini içerir. Buradaki çalıştırılabilir demolar, plandaki kimlikli ve yetkilendirilmiş ürün MVP'sinin tamamlandığı anlamına gelmez. Mevcut senaryo sözleşmeleri [use-cases.md](docs/use-cases.md) içindedir.
 
@@ -264,7 +272,15 @@ Pilotlarda insansız tamamlanan görev oranı, her 100 görevde müdahale sayıs
 
 [Türkçe](#turkce) · [English](#english)
 
-A small starting point for scenarios in which robots interact with doors, elevators, and building events. It includes **elevator calling and floor selection**, **electronic door passage**, and **cancellation of passages during a simulated fire alarm**, while retaining the robot status screen and **stop** command. It starts in simulation mode without requiring hardware.
+When a delivery robot reaches an elevator, how does it know the car is on its floor, the door has opened, and the threshold is clear? This starter explores the decisions a robot and a building must coordinate in a hardware-free simulation. The goal is to reuse the same mission across facilities with different building systems.
+
+| Feature | Available today or planned |
+| --- | --- |
+| Robot status and stop | The simulator exposes state, speed, battery, and stop. An optional ROS 2 adapter publishes a zero-velocity command. Physical stop confirmation still requires verification. |
+| Door, elevator, and fire alarm | **Simulated.** Door opening and threshold clearance, elevator boarding and exit, cancellation on alarm, and explicit reset. |
+| Facility connections | **Planned.** Door, lift, and turnstile controllers and an independent fire panel listener. Depending on the site, a vendor API, industrial I/O, or a microcontroller and relay connected to an approved control input. [Access providers](docs/product-scope.md#access-provider-roadmap) |
+| Shared passages | **Planned.** Directional queues at narrow corridors, waiting points for doors and elevators, physical red/green indicators, and verified exit. [Traffic scenarios](docs/use-cases.md#traffic-queue-cases) |
+| Disaster search | **Future research.** Operator-led exercises with dedicated robots for earthquake rubble, water searches, and flood response. [Search scenarios](docs/use-cases.md#sar-exercises) |
 
 **Product and technical plan:** [Product scope and technical direction](docs/product-scope.md) covers the current state and gaps, module and command authority boundaries, edge/cloud responsibilities, the integration matrix, and staged MVP acceptance criteria. That detailed document is currently in Turkish. The runnable demos do not mean the planned authenticated and authorized product MVP is complete. Current scenario contracts are documented in [use-cases.md](docs/use-cases.md), also in Turkish.
 

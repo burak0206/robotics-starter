@@ -4,7 +4,9 @@
 
 # Robot–bina entegrasyonu başlangıç projesi
 
-Bir teslimat robotunun motorlu girişten geçip asansörle kat değiştirdiğini düşün. Hedef, kapının geçişe hazır olduğunu ve doğru kabinin doğru katta beklediğini doğrulayarak aynı görevi farklı binalarda yürütebilmek. Bugün kapı, asansör ve alarm adımları donanımsız demolar olarak ayrı ayrı denenebilir.
+Bu projede teslimat ve temizlik robotlarını bina sistemlerine bağlayan bir platform geliştiriyorum. Hedef, robotların kapı ve asansör kullanımını, ortak geçitlerdeki sırasını ve yangın alarmı gibi tesis olaylarına tepkisini koordine etmek.
+
+Bugünkü sürümde kapı geçişi, asansör kullanımı ve yangın alarmında geçişlerin iptali ayrı simülasyonlar olarak denenebilir. Web arayüzünden robotun durumunu izleyebilir ve simülasyonları donanım olmadan adım adım ilerletebilirsin.
 
 | Özellik | Bugün deneyebileceğin veya planlanan kapsam |
 | --- | --- |
@@ -14,6 +16,8 @@ Bir teslimat robotunun motorlu girişten geçip asansörle kat değiştirdiğini
 | Tesis bağlantıları | `PLANNED`. Kapı, asansör, bariyer ve turnike entegrasyonları ile bağımsız yangın paneli dinleyicisi. [Erişim sağlayıcıları](docs/product-scope.md#access-provider-roadmap) |
 | Ortak geçişler | `PLANNED`. Dar koridorda yön sırası, kapı ve asansör önünde bekleme noktaları, fiziksel kırmızı/yeşil ışık ve doğrulanmış çıkış. [Trafik senaryoları](docs/use-cases.md#traffic-queue-cases) |
 | Afetlerde arama | `PLANNED` (uzun vadeli Ar-Ge). Depremde enkaz araması ve su, sel veya taşkın için özel robotlarla operatör gözetiminde tatbikatlar. [Arama senaryoları](docs/use-cases.md#sar-exercises) |
+
+Planlanan bir teslimat akışında robot, motorlu kapı geçişe hazır olduğunda binaya girer, atanmış kabinin doğru katta olduğunu doğrular ve asansörle hedef kata ulaşır.
 
 **Ürün ve teknik plan:** [Ürün kapsamı ve teknik yön](docs/product-scope.md); mevcut durum/boşluklar, modül ve komut yetkisi sınırları, edge/cloud, entegrasyon matrisi ve aşamalı MVP kabul kriterlerini içerir. Buradaki çalıştırılabilir demolar, plandaki kimlikli ve yetkilendirilmiş ürün MVP'sinin tamamlandığı anlamına gelmez. Mevcut senaryo sözleşmeleri [use-cases.md](docs/use-cases.md) içindedir.
 
@@ -275,7 +279,9 @@ Pilotlarda insansız tamamlanan görev oranı, her 100 görevde müdahale sayıs
 
 [Türkçe](#turkce) · [English](#english)
 
-Imagine a delivery robot passing through a powered entrance and taking an elevator to another floor. The goal is to run the same mission across buildings by checking that the entrance is ready and that the assigned car is on the correct floor. Today, the door, elevator, and alarm steps can be tried as separate simulations without hardware.
+I'm building a platform that connects delivery and cleaning robots to building systems. The goal is to coordinate how robots use doors and elevators, take turns at shared passages, and respond to facility events such as fire alarms.
+
+The current version offers separate simulations for door passage, elevator use, and passage cancellation during a fire alarm. In the web interface, you can monitor robot status and step through the simulations without hardware.
 
 | Feature | Available today or planned |
 | --- | --- |
@@ -285,6 +291,8 @@ Imagine a delivery robot passing through a powered entrance and taking an elevat
 | Facility connections | `PLANNED`. Door, elevator, barrier, and turnstile integrations, plus an independent fire panel listener. [Access providers](docs/product-scope.md#access-provider-roadmap) |
 | Shared passages | `PLANNED`. Directional queues at narrow corridors, waiting points for doors and elevators, physical red/green indicators, and verified exit. [Traffic scenarios](docs/use-cases.md#traffic-queue-cases) |
 | Disaster search | `PLANNED` (long-term research). Operator-led exercises with dedicated robots for earthquake rubble, water searches, and flood response. [Search scenarios](docs/use-cases.md#sar-exercises) |
+
+In a planned delivery workflow, a robot enters once the powered door is ready for passage, verifies that the assigned elevator car is on the correct floor, and takes it to its destination floor.
 
 **Product and technical plan:** [Product scope and technical direction](docs/product-scope.md) covers the current state and gaps, module and command authority boundaries, edge/cloud responsibilities, the integration matrix, and staged MVP acceptance criteria. That detailed document is currently in Turkish. The runnable demos do not mean the planned authenticated and authorized product MVP is complete. Current scenario contracts are documented in [use-cases.md](docs/use-cases.md), also in Turkish.
 
